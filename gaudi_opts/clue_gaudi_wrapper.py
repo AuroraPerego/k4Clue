@@ -31,7 +31,7 @@ algList = []
 
 
 evtsvc = k4DataSvc('EventDataSvc')
-# evtsvc.input =
+evtsvc.input = "/eos/user/a/aperego/fcc/k4Clue/build2/test/input_files/20240905_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root"
 
 inp = PodioInput('InputReader')
 inp.collections = [

@@ -29,14 +29,9 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
       set (CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/install" CACHE PATH "default install path" FORCE )
       endif()
 
+include(cmake/Key4hepConfig.cmake)
+
 include(GNUInstallDirs)
-
-# Set up C++ Standard
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "")
-
-if(NOT CMAKE_CXX_STANDARD MATCHES "17|20")
-  message(FATAL_ERROR "Unsupported C++ standard: ${CMAKE_CXX_STANDARD}")
-endif()
 
 find_package(DD4hep REQUIRED)
 find_package(EDM4HEP REQUIRED)
@@ -44,9 +39,22 @@ find_package(EDM4HEP REQUIRED)
 find_package(k4FWCore REQUIRED)
 find_package(Gaudi REQUIRED)
 
+#will become this when alpaka will be in cvmfs in key4hep
+#find_package(alpaka REQUIRED)
+
+find_package(Boost 1.75.0 REQUIRED)
+
+include(FetchContent)
+
+FetchContent_Declare(
+  alpaka
+  GIT_REPOSITORY https://github.com/alpaka-group/alpaka.git
+  GIT_TAG fe9436d57e25b07dc73b8b042a0b3eec499956d0 # 1.2.0
+  GIT_SHALLOW TRUE
+  FIND_PACKAGE_ARGS)
+FetchContent_MakeAvailable(alpaka)
+
 include(CTest)
 
-add_subdirectory(src)
-
-message(STATUS "Finished!")
-
+# CLUE as Gaudi algorithm
+add_subdirectory(src/k4clue)

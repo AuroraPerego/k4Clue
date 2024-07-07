@@ -30,25 +30,33 @@ gaudi_add_module(ClueGaudiAlgorithmWrapper
     ${PROJECT_SOURCE_DIR}/src/CLUECalorimeterHit.cpp
     ${PROJECT_SOURCE_DIR}/src/CLUENtuplizer.cpp
   LINK
-    Gaudi::GaudiAlgLib
     Gaudi::GaudiKernel
     k4FWCore::k4FWCore
     DD4hep::DDCore
     EDM4HEP::edm4hep
-    CLUEAlgo_lib
 )
 
 target_include_directories(ClueGaudiAlgorithmWrapper PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/CLUEstering/include>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${alpaka_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
 )
+
+# alpaka build flags
+target_compile_options(
+  ClueGaudiAlgorithmWrapper
+  PRIVATE -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED
+          -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_SYNC_BACKEND)
+
 ExternalData_Add_Test(k4clue_tests NAME gaudiWrapper
          WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-         COMMAND bash -c "k4run ${PROJECT_SOURCE_DIR}/gaudi_opts/clue_gaudi_wrapper.py --EventDataSvc.input DATA{${PROJECT_SOURCE_DIR}/test/input_files/20240226_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root} --ClueGaudiAlgorithmWrapperName.OutputLevel 2 --CLUEAnalysis.OutputLevel 2")
+         COMMAND bash -c "k4run ${PROJECT_SOURCE_DIR}/gaudi_opts/clue_gaudi_wrapper.py --EventDataSvc.input DATA{${PROJECT_SOURCE_DIR}/test/input_files/20240905_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root} --ClueGaudiAlgorithmWrapperName.OutputLevel 2 --CLUEAnalysis.OutputLevel 2")
 
 set_tests_properties(gaudiWrapper PROPERTIES
                      FAIL_REGULAR_EXPRESSION "ERROR;Failed")
 
 set_property(TEST gaudiWrapper APPEND PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${PROJECT_BINARY_DIR}:${PROJECT_BINARY_DIR}/${CMAKE_PROJECT_NAME}:${PROJECT_BINARY_DIR}/src/k4clue:$<$<TARGET_EXISTS:ROOT::Core>:$<TARGET_FILE_DIR:ROOT::Core>>:$<$<TARGET_EXISTS:EDM4HEP::edm4hep>:$<TARGET_FILE_DIR:EDM4HEP::edm4hep>>:$<$<TARGET_EXISTS:podio::podio>:$<TARGET_FILE_DIR:podio::podio>>:$ENV{LD_LIBRARY_PATH}")
-set_property(TEST gaudiWrapper APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/${CMAKE_PROJECT_NAME}/genConfDir:${PROJECT_BINARY_DIR}/src/k4clue/genConfDir:$ENV{PYTHONPATH}")        
+set_property(TEST gaudiWrapper APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/${CMAKE_PROJECT_NAME}/genConfDir:${PROJECT_BINARY_DIR}/src/k4clue/genConfDir:$ENV{PYTHONPATH}")
 
 ExternalData_Add_Target(k4clue_tests)
