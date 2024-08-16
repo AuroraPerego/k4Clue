@@ -7,7 +7,7 @@
 #include "AlpakaCore/alpaka/devices.h"
 #include "Framework/ReusableObjectHolder.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   template <typename Queue>
   class StreamCache {
@@ -23,7 +23,7 @@ namespace cms::alpakatools {
     // will be returned to the cache by the shared_ptr destructor.
     // This function is thread safe
     ALPAKA_FN_HOST std::shared_ptr<Queue> get(Device const& dev) {
-      return cache_[cms::alpakatools::getDeviceIndex(dev)].makeOrGet([dev]() { return std::make_unique<Queue>(dev); });
+      return cache_[alpakatools::getDeviceIndex(dev)].makeOrGet([dev]() { return std::make_unique<Queue>(dev); });
     }
 
   private:
@@ -35,7 +35,7 @@ namespace cms::alpakatools {
       // StreamCache lives through multiple tests (and go through
       // multiple shutdowns of the framework).
       cache_.clear();
-      cache_.resize(alpaka::getDevCount(*cms::alpakatools::platform<Platform>));
+      cache_.resize(alpaka::getDevCount(*alpakatools::platform<Platform>));
     }
 
     std::vector<edm::ReusableObjectHolder<Queue>> cache_;
@@ -50,6 +50,6 @@ namespace cms::alpakatools {
     return cache;
   }
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_StreamCache_h

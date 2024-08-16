@@ -7,7 +7,7 @@
 
 #include "AlpakaCore/config.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   // alpaka accelerator platform and devices
   // Note: even when TPlatform is the same as PlatformHost these functions return different objects
@@ -21,6 +21,6 @@ namespace cms::alpakatools {
   template <typename TPlatform, typename = std::enable_if_t<alpaka::isPlatform<TPlatform>>>
   std::vector<alpaka::Dev<TPlatform>> const& devices();
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_alpaka_devices_h

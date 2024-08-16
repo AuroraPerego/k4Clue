@@ -3,7 +3,7 @@
 
 #include "AlpakaCore/common.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   // alpaka host platform and device
 
@@ -13,6 +13,6 @@ namespace cms::alpakatools {
   // return the alpaka host device
   alpaka_common::DevHost const& host();
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_host_h

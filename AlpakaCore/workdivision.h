@@ -10,7 +10,7 @@
 
 using namespace alpaka_common;
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   /*********************************************
    *              WORKDIV CREATION
@@ -416,6 +416,6 @@ namespace cms::alpakatools {
     return isNextStrideElementValid;
   }
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_workdivision_h

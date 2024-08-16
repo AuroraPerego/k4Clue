@@ -5,7 +5,7 @@
 #include "AlpakaCore/common.h"
 #include "AlpakaCore/host.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   // alpaka host platform and device
 
@@ -22,4 +22,4 @@ namespace cms::alpakatools {
     return host;
   }
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools

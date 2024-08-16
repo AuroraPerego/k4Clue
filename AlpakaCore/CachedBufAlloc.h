@@ -5,9 +5,8 @@
 
 #include "AlpakaCore/getDeviceCachingAllocator.h"
 #include "AlpakaCore/getHostCachingAllocator.h"
-#include "Framework/demangle.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   namespace traits {
 
@@ -246,6 +245,6 @@ namespace cms::alpakatools {
     return traits::CachedBufAlloc<TElem, alpaka::Dim<TExtent>, TIdx, TDev, TQueue>::allocCachedBuf(dev, queue, extent);
   }
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_CachedBufAlloc_h

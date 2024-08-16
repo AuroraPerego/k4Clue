@@ -4,7 +4,7 @@
 #include "alpakaConfig.h"
 #include "alpakaDevices.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   template <typename TPlatform>
   alpaka::Dev<TPlatform> const& chooseDevice(edm::StreamID id) {
@@ -14,10 +14,10 @@ namespace cms::alpakatools {
     // (and even then there is no load balancing).
 
     // TODO: improve the "assignment" logic
-    auto const& devices = cms::alpakatools::devices<TPlatform>();
+    auto const& devices = alpakatools::devices<TPlatform>();
     return devices[id % devices.size()];
   }
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // HeterogeneousCore_AlpakaCore_chooseDevice_h

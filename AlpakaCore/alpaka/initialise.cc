@@ -14,9 +14,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     static bool done = false;
 
     if (not done) {
-      auto size = cms::alpakatools::devices<Platform>().size();
+      auto size = alpakatools::devices<Platform>().size();
       std::cout << "Found " << size << " " << suffix[size < 2 ? size : 2] << std::endl;
-      for (auto const& device : cms::alpakatools::devices<Platform>()) {
+      for (auto const& device : alpakatools::devices<Platform>()) {
         std::cout << "  - " << alpaka::getName(device) << std::endl;
       }
       if (verbose) {

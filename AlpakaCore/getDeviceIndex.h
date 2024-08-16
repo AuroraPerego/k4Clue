@@ -6,7 +6,7 @@
 #include <alpaka/alpaka.hpp>
 #include "AlpakaCore/config.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   // generic interface, for DevOacc and DevOmp5
   template <typename Device>
@@ -46,6 +46,6 @@ namespace cms::alpakatools {
   }
 #endif  // ALPAKA_SYCL_ONEAPI_GPU
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_getDeviceIndex_h

@@ -3,7 +3,7 @@
 
 #include <alpaka/alpaka.hpp>
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   // Which memory allocator to use
   //   - Synchronous:   (device and host) cudaMalloc/hipMalloc and cudaMallocHost/hipMallocHost
@@ -68,6 +68,6 @@ namespace cms::alpakatools {
 #endif
 #endif  // ALPAKA_SYCL_ONEAPI_GPU
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_AllocatorPolicy_h

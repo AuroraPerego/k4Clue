@@ -10,7 +10,7 @@
 #include "AlpakaCore/alpaka/devices.h"
 #include "AlpakaCore/getDeviceIndex.h"
 
-namespace cms::alpakatools {
+namespace alpakatools {
 
   namespace detail {
 
@@ -18,7 +18,7 @@ namespace cms::alpakatools {
     auto allocate_device_allocators() {
       using Allocator = CachingAllocator<TDevice, TQueue>;
       using Platform = alpaka::Platform<TDevice>;
-      auto const& devices = cms::alpakatools::devices<Platform>();
+      auto const& devices = alpakatools::devices<Platform>();
       auto const size = devices.size();
 
       // allocate the storage for the objects
@@ -57,12 +57,12 @@ namespace cms::alpakatools {
     static auto allocators = detail::allocate_device_allocators<TDevice, TQueue>();
 
     size_t const index = getDeviceIndex(device);
-    assert(index < cms::alpakatools::devices<Platform>().size());
+    assert(index < alpakatools::devices<Platform>().size());
 
     // the public interface is thread safe
     return allocators[index];
   }
 
-}  // namespace cms::alpakatools
+}  // namespace alpakatools
 
 #endif  // AlpakaCore_getDeviceCachingAllocator_h
