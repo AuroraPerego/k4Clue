@@ -5,6 +5,8 @@
 // Author: Felice Pantaleo, CERN
 //
 
+#include <alpaka/core/Positioning.hpp>
+
 namespace alpakatools {
 
   template <class T, int maxSize>
