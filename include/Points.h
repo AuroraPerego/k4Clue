@@ -16,45 +16,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef Points_h
-#define Points_h
 
+#ifndef points_h
+#define points_h
+
+#include "alpaka/VecArray.h"
+#include <vector>
+
+using alpakatools::VecArray;
+
+template <uint8_t Ndim>
 struct Points {
-  
-  std::vector<float> x;
-  std::vector<float> y;
-  std::vector<float> r;
-  std::vector<int> layer;
-  std::vector<float> weight;
-  
-  std::vector<float> rho;
-  std::vector<float> delta;
-  std::vector<int> nearestHigher;
-  std::vector<int> clusterIndex;
-  std::vector<std::vector<int>> followers;
-  std::vector<int> isSeed;
+  Points() = default;
+  Points(const std::vector<VecArray<float, Ndim>>& coords,
+         const std::vector<float>& weight)
+      : m_coords{coords}, m_weight{weight}, n{weight.size()} {
+    m_rho.resize(n);
+    m_delta.resize(n);
+    m_nearestHigher.resize(n);
+    m_clusterIndex.resize(n);
+    m_isSeed.resize(n);
+  }
+  Points(const std::vector<std::vector<float>>& coords, const std::vector<float>& weight)
+      : m_weight{weight}, n{weight.size()} {
+    for (const auto& x : coords) {
+      VecArray<float, Ndim> temp_vecarray;
+      for (auto value : x) {
+        temp_vecarray.push_back_unsafe(value);
+      }
+      m_coords.push_back(temp_vecarray);
+    }
+
+    m_rho.resize(n);
+    m_delta.resize(n);
+    m_nearestHigher.resize(n);
+    m_clusterIndex.resize(n);
+    m_isSeed.resize(n);
+  }
+
+  void clear() {
+    m_coords.clear();
+    m_layer.clear();
+    m_weight.clear();
+
+    m_rho.clear();
+    m_delta.clear();
+    m_nearestHigher.clear();
+    m_clusterIndex.clear();
+    m_followers.clear();
+    m_isSeed.clear();
+
+    n = 0;
+  }
+
+  std::vector<VecArray<float, Ndim>> m_coords;
+  std::vector<float> m_weight;
+  std::vector<float> m_rho;
+  std::vector<float> m_delta;
+  std::vector<int> m_nearestHigher;
+  std::vector<int> m_clusterIndex;
+  std::vector<int> m_isSeed;
   // why use int instead of bool?
   // https://en.cppreference.com/w/cpp/container/vector_bool
   // std::vector<bool> behaves similarly to std::vector, but in order to be space efficient, it:
   // Does not necessarily store its elements as a contiguous array (so &v[0] + n != &v[n])
 
-  int n;
+  size_t n;
 
-  void clear() {
-    x.clear();
-    y.clear();
-    r.clear();
-    layer.clear();
-    weight.clear();
-
-    rho.clear();
-    delta.clear();
-    nearestHigher.clear();
-    clusterIndex.clear();
-    followers.clear();
-    isSeed.clear();
-
-    n = 0;
-  }
+  // missing in cluestering
+  std::vector<int> m_layer;
+  std::vector<std::vector<int>> m_followers;
 };
+
 #endif

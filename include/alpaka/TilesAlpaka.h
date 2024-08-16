@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#include <alpaka/alpaka.hpp>
 #include <algorithm>
+#include <alpaka/alpaka.hpp>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -15,34 +15,28 @@
 #include <type_traits>
 #include <vector>
 
-#include "../../AlpakaCore/config.h"
-#include "../../AlpakaCore/memory.h"
-#include "VecArray.h"
-
-#include "CLDBarrelLayerTilesConstants.h"
-#include "CLDEndcapLayerTilesConstants.h"
-#include "CLICdetBarrelLayerTilesConstants.h"
-#include "CLICdetEndcapLayerTilesConstants.h"
-#include "LArBarrelLayerTilesConstants.h"
-#include "LayerTilesConstants.h"
+#include "AlpakaCore/config.h"
+#include "AlpakaCore/memory.h"
+#include "alpaka/TilesConstants.h"
+#include "alpaka/VecArray.h"
 
 using alpakatools::VecArray;
 
 template <typename TAcc, typename T>
-class LayerTiles_T {
+class TilesAlpaka_T {
  public:
-  LayerTiles_T(const TAcc& acc) { acc_ = acc; };
-
-  void resizeTiles() { tiles_.resize(T::nTiles); }
+  TilesAlpaka_T(const TAcc& acc) { acc_ = acc; tiles_.resize(T::nTiles); };
 
   int nPerDim(int dim) const { return T::nTiles[dim]; }
 
-  ALPAKA_FN_HOST_ACC inline int getBin(float coord,
-                                                 int dim) const {
+  ALPAKA_FN_HOST_ACC inline int getBin(float coord, int dim) const {
+    int coord_Bin;
     if constexpr (T::wrapped[dim]) {
-      int coord_Bin = static_cast<int>(reco::normalizeWrapped(coord) / T::tileSize[dim]);
+      coord_Bin =
+          static_cast<int>(reco::normalizedPhi(coord) / T::tileSize[dim]);
     } else {
-      int coord_Bin = static_cast<int>((coord - T::MinMax[dim][0]) / T::tileSize[dim]);
+      coord_Bin =
+          static_cast<int>((coord - T::MinMax[dim][0]) / T::tileSize[dim]);
 
       // Address the cases of underflow and overflow and underflow
       coord_Bin = alpaka::math::min(acc_, coord_Bin, T::nTiles[dim] - 1);
@@ -55,10 +49,10 @@ class LayerTiles_T {
       const VecArray<float, T::nDim>& coords) const {
     int globalBin = getBin(coords[0], 0);
     for (int i = 1; i != T::nDim; ++i) {
-      if constexpr (T::wrapped[dim]) {
-        globalBin += T::nTiles[dim] * getBin(acc_, coords[i], i);
+      if constexpr (T::wrapped[i]) {
+        globalBin += T::nTiles[i] * getBin(acc_, coords[i], i);
       } else {
-        globalBin += T::nTiles[dim] * getBin(acc_, coords[i], i);
+        globalBin += T::nTiles[i] * getBin(acc_, coords[i], i);
       }
     }
     return globalBin;
@@ -68,13 +62,13 @@ class LayerTiles_T {
       const VecArray<uint32_t, T::nDim>& Bins) const {
     uint32_t globalBin{Bins[0]};
     for (int i = 1; i != T::nDim; ++i) {
-      globalBin += T::nTiles[dim] * Bins[i];
+      globalBin += T::nTiles[i] * Bins[i];
     }
     return globalBin;
   }
 
-  ALPAKA_FN_ACC inline constexpr void fill(const VecArray<float, T::nDim>& coords,
-                                           int i) {
+  ALPAKA_FN_ACC inline constexpr void fill(
+      const VecArray<float, T::nDim>& coords, int i) {
     tiles_[getGlobalBin(coords)].push_back(acc_, i);
   }
 
