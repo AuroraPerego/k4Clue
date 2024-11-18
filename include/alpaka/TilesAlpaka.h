@@ -27,11 +27,11 @@ class TilesAlpaka_T {
  public:
   TilesAlpaka_T(const TAcc& acc) { acc_ = acc; tiles_.resize(T::nTiles); };
 
-  int nPerDim(int dim) const { return T::nTiles[dim]; }
+  int nTilesPerDim(int dim) const { return tiles::nTilesPerDim<T>(dim); }
 
   ALPAKA_FN_HOST_ACC inline int getBin(float coord, int dim) const {
     int coord_Bin;
-    if constexpr (T::wrapped[dim]) {
+    if (T::wrapped[dim]) { // FIXME with dim it cannot be constexpr
       coord_Bin =
           static_cast<int>(reco::normalizedPhi(coord) / T::tileSize[dim]);
     } else {
@@ -39,7 +39,7 @@ class TilesAlpaka_T {
           static_cast<int>((coord - T::MinMax[dim][0]) / T::tileSize[dim]);
 
       // Address the cases of underflow and overflow and underflow
-      coord_Bin = alpaka::math::min(acc_, coord_Bin, T::nTiles[dim] - 1);
+      coord_Bin = alpaka::math::min(acc_, coord_Bin, nTilesPerDim(dim) - 1);
       coord_Bin = alpaka::math::max(acc_, coord_Bin, 0);
     }
     return coord_Bin;
@@ -49,10 +49,10 @@ class TilesAlpaka_T {
       const VecArray<float, T::nDim>& coords) const {
     int globalBin = getBin(coords[0], 0);
     for (int i = 1; i != T::nDim; ++i) {
-      if constexpr (T::wrapped[i]) {
-        globalBin += T::nTiles[i] * getBin(acc_, coords[i], i);
+      if (T::wrapped[i]) { // FIXME with dim it cannot be constexpr
+        globalBin += nTilesPerDim(i) * getBin(coords[i], i);
       } else {
-        globalBin += T::nTiles[i] * getBin(acc_, coords[i], i);
+        globalBin += nTilesPerDim(i) * getBin(coords[i], i);
       }
     }
     return globalBin;
@@ -62,7 +62,7 @@ class TilesAlpaka_T {
       const VecArray<uint32_t, T::nDim>& Bins) const {
     uint32_t globalBin{Bins[0]};
     for (int i = 1; i != T::nDim; ++i) {
-      globalBin += T::nTiles[i] * Bins[i];
+      globalBin += nTilesPerDim(i) * Bins[i];
     }
     return globalBin;
   }
@@ -77,8 +77,8 @@ class TilesAlpaka_T {
       VecArray<VecArray<uint32_t, 2>, T::nDim>* search_box) {
     for (int dim = 0; dim != T::nDim; ++dim) {
       VecArray<uint32_t, 2> dim_sb;
-      dim_sb.push_back_unsafe(getBin(acc_, sb_extremes[dim][0], dim));
-      dim_sb.push_back_unsafe(getBin(acc_, sb_extremes[dim][1], dim));
+      dim_sb.push_back_unsafe(getBin(sb_extremes[dim][0], dim));
+      dim_sb.push_back_unsafe(getBin(sb_extremes[dim][1], dim));
 
       search_box->push_back_unsafe(dim_sb);
     }

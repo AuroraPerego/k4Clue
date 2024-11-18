@@ -29,7 +29,7 @@
 #include <edm4hep/ClusterCollection.h>
 #include <edm4hep/Constants.h>
 #include "CLUECalorimeterHit.h"
-#include "CLUEAlgo.h"
+#include "include/alpaka/CLUEAlgoAlpaka.hpp"
 
 class ClueGaudiAlgorithmWrapper : public GaudiAlgorithm {
 public:
@@ -45,10 +45,10 @@ public:
   void printTimingReport(std::vector<float> &vals, int repeats,
                        const std::string label) ;
 
-  void fillCLUEPoints(std::vector<clue::CLUECalorimeterHit>& clue_hits);
+  void fillCLUEPoints(Points<2> clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits);
   std::map<int, std::vector<int> > runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
                                            bool isBarrel);
-  void cleanCLUEPoints();
+
   void fillFinalClusters(std::vector<clue::CLUECalorimeterHit>& clue_hits,
                          const std::map<int, std::vector<int> > clusterMap,
                          edm4hep::ClusterCollection* clusters);
@@ -66,11 +66,6 @@ public:
 
   // CLUE points
   clue::CLUECalorimeterHitCollection clue_hit_coll;
-  std::vector<float> x;
-  std::vector<float> y;
-  std::vector<float> r;
-  std::vector<int> layer;
-  std::vector<float> weight;
 
   // Handle to read the calo cells and their cellID
   DataHandle<edm4hep::CalorimeterHitCollection> EB_calo_handle {"BarrelInputHits", Gaudi::DataHandle::Reader, this};
@@ -78,8 +73,9 @@ public:
   MetaDataHandle<std::string> cellIDHandle {EB_calo_handle, edm4hep::CellIDEncoding, Gaudi::DataHandle::Reader};
 
   // CLUE Algo
-  CLICdetBarrelCLUEAlgo clueAlgoBarrel_;
-  CLICdetEndcapCLUEAlgo clueAlgoEndcap_;
+  ALPAKA_ACCELERATOR_NAMESPACE::CLICdetBarrelCLUEAlgo clueAlgoBarrel_;
+  ALPAKA_ACCELERATOR_NAMESPACE::CLICdetEndcapCLUEAlgo clueAlgoEndcap_;
+  std::optional<ALPAKA_ACCELERATOR_NAMESPACE::Queue> queue_;
 
   // Collections in output
   DataHandle<edm4hep::CalorimeterHitCollection> caloHitsHandle{"CLUEClustersAsHits", Gaudi::DataHandle::Writer, this};

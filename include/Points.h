@@ -20,62 +20,64 @@
 #ifndef points_h
 #define points_h
 
-#include "alpaka/VecArray.h"
 #include <vector>
+#include "alpaka/VecArray.h"
 
 using alpakatools::VecArray;
 
-template <uint8_t Ndim>
+template<uint8_t nDim>
 struct Points {
+
   Points() = default;
-  Points(const std::vector<VecArray<float, Ndim>>& coords,
-         const std::vector<float>& weight)
-      : m_coords{coords}, m_weight{weight}, n{weight.size()} {
-    m_rho.resize(n);
-    m_delta.resize(n);
-    m_nearestHigher.resize(n);
-    m_clusterIndex.resize(n);
-    m_isSeed.resize(n);
+  Points(const std::vector<VecArray<float, nDim>>& in_coords,
+         const std::vector<float>& in_weight)
+      : coords{in_coords}, weight{in_weight}, n{weight.size()} {
+    rho.resize(n);
+    delta.resize(n);
+    nearestHigher.resize(n);
+    clusterIndex.resize(n);
+    isSeed.resize(n);
   }
-  Points(const std::vector<std::vector<float>>& coords, const std::vector<float>& weight)
-      : m_weight{weight}, n{weight.size()} {
-    for (const auto& x : coords) {
-      VecArray<float, Ndim> temp_vecarray;
+  Points(const std::vector<std::vector<float>>& in_coords, const std::vector<float>& in_weight)
+      : weight{in_weight}, n{weight.size()} {
+    for (const auto& x : in_coords) {
+      VecArray<float, nDim> temp_vecarray;
       for (auto value : x) {
         temp_vecarray.push_back_unsafe(value);
       }
-      m_coords.push_back(temp_vecarray);
+      coords.push_back(temp_vecarray);
     }
 
-    m_rho.resize(n);
-    m_delta.resize(n);
-    m_nearestHigher.resize(n);
-    m_clusterIndex.resize(n);
-    m_isSeed.resize(n);
+    rho.resize(n);
+    delta.resize(n);
+    nearestHigher.resize(n);
+    clusterIndex.resize(n);
+    isSeed.resize(n);
   }
 
   void clear() {
-    m_coords.clear();
-    m_layer.clear();
-    m_weight.clear();
+    coords.clear();
+    layer.clear();
+    weight.clear();
 
-    m_rho.clear();
-    m_delta.clear();
-    m_nearestHigher.clear();
-    m_clusterIndex.clear();
-    m_followers.clear();
-    m_isSeed.clear();
+    rho.clear();
+    delta.clear();
+    nearestHigher.clear();
+    clusterIndex.clear();
+    followers.clear();
+    isSeed.clear();
 
     n = 0;
   }
 
-  std::vector<VecArray<float, Ndim>> m_coords;
-  std::vector<float> m_weight;
-  std::vector<float> m_rho;
-  std::vector<float> m_delta;
-  std::vector<int> m_nearestHigher;
-  std::vector<int> m_clusterIndex;
-  std::vector<int> m_isSeed;
+  std::vector<VecArray<float, nDim>> coords;
+  std::vector<float> addCoord;
+  std::vector<float> weight;
+  std::vector<float> rho;
+  std::vector<float> delta;
+  std::vector<int> nearestHigher;
+  std::vector<int> clusterIndex;
+  std::vector<int> isSeed;
   // why use int instead of bool?
   // https://en.cppreference.com/w/cpp/container/vector_bool
   // std::vector<bool> behaves similarly to std::vector, but in order to be space efficient, it:
@@ -84,8 +86,8 @@ struct Points {
   size_t n;
 
   // missing in cluestering
-  std::vector<int> m_layer;
-  std::vector<std::vector<int>> m_followers;
+  std::vector<int> layer;
+  std::vector<std::vector<int>> followers;
 };
 
 #endif
