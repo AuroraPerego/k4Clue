@@ -46,11 +46,11 @@ public:
                        const std::string label) ;
 
   void fillCLUEPoints(std::vector<clue::CLUECalorimeterHit>& clue_hits);
-  std::map<int, std::vector<int> > runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits, 
+  std::map<int, std::vector<int> > runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
                                            bool isBarrel);
   void cleanCLUEPoints();
   void fillFinalClusters(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                         const std::map<int, std::vector<int> > clusterMap, 
+                         const std::map<int, std::vector<int> > clusterMap,
                          edm4hep::ClusterCollection* clusters);
   void calculatePosition(edm4hep::MutableCluster* cluster) ;
   void transformClustersInCaloHits(edm4hep::ClusterCollection* clusters,
@@ -58,7 +58,7 @@ public:
 
   private:
   // Parameters in input
-  const edm4hep::CalorimeterHitCollection* EB_calo_coll; 
+  const edm4hep::CalorimeterHitCollection* EB_calo_coll;
   const edm4hep::CalorimeterHitCollection* EE_calo_coll;
   float dc;
   float rhoc;
@@ -72,7 +72,7 @@ public:
   std::vector<int> layer;
   std::vector<float> weight;
 
-  // Handle to read the calo cells and their cellID 
+  // Handle to read the calo cells and their cellID
   DataHandle<edm4hep::CalorimeterHitCollection> EB_calo_handle {"BarrelInputHits", Gaudi::DataHandle::Reader, this};
   DataHandle<edm4hep::CalorimeterHitCollection> EE_calo_handle {"EndcapInputHits", Gaudi::DataHandle::Reader, this};
   MetaDataHandle<std::string> cellIDHandle {EB_calo_handle, edm4hep::CellIDEncoding, Gaudi::DataHandle::Reader};
