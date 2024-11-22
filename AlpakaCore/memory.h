@@ -76,7 +76,7 @@ struct view_type<TDev, T[N]> {
 // scalar and 1-dimensional host buffers
 
 template <typename T>
-using host_buffer = typename detail::buffer_type<DevHost, T>::type;
+using host_buffer = typename detail::buffer_type<Host, T>::type;
 
 // non-cached, non-pinned, scalar and 1-dimensional host buffers
 
@@ -181,16 +181,16 @@ make_host_buffer(TQueue const& queue) {
 // scalar and 1-dimensional host views
 
 template <typename T>
-using host_view = typename detail::view_type<DevHost, T>::type;
+using host_view = typename detail::view_type<Host, T>::type;
 
 template <typename T>
 std::enable_if_t<not std::is_array_v<T>, host_view<T>> make_host_view(T& data) {
-  return alpaka::ViewPlainPtr<DevHost, T, Dim0D, Idx>(&data, host(), Scalar{});
+  return alpaka::ViewPlainPtr<Host, T, Dim0D, Idx>(&data, host(), Scalar{});
 }
 
 template <typename T>
 host_view<T[]> make_host_view(T* data, Extent extent) {
-  return alpaka::ViewPlainPtr<DevHost, T, Dim1D, Idx>(data, host(),
+  return alpaka::ViewPlainPtr<Host, T, Dim1D, Idx>(data, host(),
                                                       Vec1D{extent});
 }
 
@@ -199,7 +199,7 @@ std::enable_if_t<cms::is_unbounded_array_v<T> and
                      not std::is_array_v<std::remove_extent_t<T>>,
                  host_view<T>>
 make_host_view(T& data, Extent extent) {
-  return alpaka::ViewPlainPtr<DevHost, std::remove_extent_t<T>, Dim1D, Idx>(
+  return alpaka::ViewPlainPtr<Host, std::remove_extent_t<T>, Dim1D, Idx>(
       data, host(), Vec1D{extent});
 }
 
@@ -208,7 +208,7 @@ std::enable_if_t<cms::is_bounded_array_v<T> and
                      not std::is_array_v<std::remove_extent_t<T>>,
                  host_view<T>>
 make_host_view(T& data) {
-  return alpaka::ViewPlainPtr<DevHost, std::remove_extent_t<T>, Dim1D, Idx>(
+  return alpaka::ViewPlainPtr<Host, std::remove_extent_t<T>, Dim1D, Idx>(
       data, host(), Vec1D{std::extent_v<T>});
 }
 

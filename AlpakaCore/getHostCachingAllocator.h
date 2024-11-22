@@ -4,14 +4,15 @@
 #include "AlpakaCore/AllocatorConfig.h"
 #include "AlpakaCore/CachingAllocator.h"
 #include "AlpakaCore/alpaka/devices.h"
+#include "AlpakaCore/config.h"
 #include "AlpakaCore/host.h"
 
 namespace alpakatools {
 
   template <typename TQueue>
-  inline CachingAllocator<alpaka_common::DevHost, TQueue>& getHostCachingAllocator() {
+  inline CachingAllocator<alpaka_common::Host, TQueue>& getHostCachingAllocator() {
     // thread safe initialisation of the host allocator
-    static CachingAllocator<alpaka_common::DevHost, TQueue> allocator(host(),
+    static CachingAllocator<alpaka_common::Host, TQueue> allocator(host(),
                                                                       config::binGrowth,
                                                                       config::minBin,
                                                                       config::maxBin,

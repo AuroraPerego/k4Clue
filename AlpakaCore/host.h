@@ -1,18 +1,16 @@
 #ifndef AlpakaCore_host_h
 #define AlpakaCore_host_h
 
-#include "AlpakaCore/common.h"
+#include <alpaka/alpaka.hpp>
 
 namespace alpakatools {
 
-  // alpaka host platform and device
+  // returns the alpaka host platform
+  alpaka::PlatformCpu const& host_platform();
 
-  // return the alpaka host platform
-  alpaka_common::PlatformHost const& host_platform();
+  // returns the alpaka host device
+  alpaka::DevCpu const& host();
 
-  // return the alpaka host device
-  alpaka_common::DevHost const& host();
-
-}  // namespace alpakatools
+}  // namespace cms::alpakatools
 
 #endif  // AlpakaCore_host_h
