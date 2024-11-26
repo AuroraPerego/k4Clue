@@ -87,7 +87,7 @@ class TilesAlpaka_T {
   ALPAKA_FN_HOST_ACC inline constexpr auto size() { return T::nTiles; }
 
   ALPAKA_FN_HOST_ACC inline constexpr void clear() {
-    for (int i = 0; i < T::nTiles; ++i) {
+    for (uint32_t i = 0; i < T::nTiles; ++i) {
       tiles_[i].reset();
     }
   }

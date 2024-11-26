@@ -106,6 +106,10 @@ namespace alpaka_cpu_sycl {
 
 #endif // ALPAKA_ACC_SYCL_ENABLED && ALPAKA_SYCL_ONEAPI_CPU
 
+#ifdef ALPAKA_SYCL_ONEAPI_CPU
+#define ALPAKA_ACCELERATOR_NAMESPACE alpaka_cpu_sycl
+#endif  // ALPAKA_SYCL_ONEAPI_CPU
+
 #if defined(ALPAKA_ACC_SYCL_ENABLED) && defined(ALPAKA_SYCL_ONEAPI_GPU)
 namespace alpaka_gpu_sycl {
   using namespace alpaka_common;
@@ -124,10 +128,6 @@ namespace alpaka_gpu_sycl {
 }  // namespace alpaka_gpu_sycl
 
 #endif  // ALPAKA_ACC_SYCL_ENABLED  && ALPAKA_SYCL_ONEAPI_GPU
-
-#ifdef ALPAKA_SYCL_ONEAPI_CPU
-#define ALPAKA_ACCELERATOR_NAMESPACE alpaka_cpu_sycl
-#endif  // ALPAKA_SYCL_ONEAPI_CPU
 
 #ifdef ALPAKA_SYCL_ONEAPI_GPU
 #define ALPAKA_ACCELERATOR_NAMESPACE alpaka_gpu_sycl

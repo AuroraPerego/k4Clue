@@ -51,11 +51,11 @@ StatusCode ClueGaudiAlgorithmWrapper::initialize() {
 
   using Acc = ALPAKA_ACCELERATOR_NAMESPACE::Acc1D;
   using Dev = alpaka::Dev<Acc>;
-  using Queue = alpaka::Queue<Acc, alpaka::NonBlocking>;
+  using Queue = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
 
   auto const platform = alpaka::Platform<Acc>{};
   Dev const devAcc(alpaka::getDevByIdx(platform, 0u));
-  queue_ = Queue{devAcc};
+  *queue_ = Queue{devAcc};
 
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -300,9 +300,7 @@ void ClueGaudiAlgorithmWrapper::calculatePosition(edm4hep::MutableCluster* clust
   float z_log = 0.f;
   double thresholdW0_ = 2.9; //Min percentage of energy to contribute to the log-reweight position
 
-  float maxEnergyValue = 0.f;
-  unsigned int maxEnergyIndex = 0;
-  for (int i = 0; i < cluster->hits_size(); i++) {
+  for (std::size_t i = 0; i < cluster->hits_size(); i++) {
     float rhEnergy = cluster->getHits(i).getEnergy();
     float Wi = std::max(thresholdW0_ - std::log(rhEnergy / total_weight), 0.);
     x_log += cluster->getHits(i).getPosition().x * Wi;
