@@ -32,7 +32,7 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 include(GNUInstallDirs)
 
 # Set up C++ Standard
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "")
+set(CMAKE_CXX_STANDARD 20 CACHE STRING "")
 
 if(NOT CMAKE_CXX_STANDARD MATCHES "17|20")
   message(FATAL_ERROR "Unsupported C++ standard: ${CMAKE_CXX_STANDARD}")
@@ -43,6 +43,8 @@ find_package(EDM4HEP REQUIRED)
 
 find_package(k4FWCore REQUIRED)
 find_package(Gaudi REQUIRED)
+
+find_package(alpaka REQUIRED)
 
 include(CTest)
 
