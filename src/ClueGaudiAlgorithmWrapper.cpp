@@ -55,7 +55,7 @@ StatusCode ClueGaudiAlgorithmWrapper::initialize() {
 
   auto const platform = alpaka::Platform<Acc>{};
   Dev const devAcc(alpaka::getDevByIdx(platform, 0u));
-  *queue_ = Queue{devAcc};
+  queue_ = std::make_optional<Queue>(devAcc);
 
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -130,32 +130,14 @@ void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2> clue_points, const std:
     } else {
       temp_vecarray.push_back_unsafe(ch.getPosition().x);
       temp_vecarray.push_back_unsafe(ch.getPosition().y);
-      // temp_vecarray.push_back_unsafe(ch.getR());
     }
     clue_points.coords.push_back(temp_vecarray);
     clue_points.addCoord.push_back(ch.getR());
   }
-  //for (const auto& ch : clue_hits) {
-  //  if(ch.inBarrel()){
-  //    clue_points.coords[0].push_back(ch.getPhi());
-  //    clue_points.coords[1].push_back(ch.getPosition().z);
-  //    clue_points.coords[2].push_back(ch.getR());
-  //  } else {
-  //    clue_points.coords[0].push_back(ch.getPosition().x);
-  //    clue_points.coords[1].push_back(ch.getPosition().y);
-  //    // For the endcap the r info is not used
-  //    // clue_points.coords[2].push_back(ch.getR());
-  //  }
-  //  clue_points.layer.push_back(ch.getLayer());
-  //  clue_points.weight.push_back(ch.getEnergy());
-  //}
-  //return;
-
 }
 
-// TODO AP add const to arguments
 std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-								  bool isBarrel = false) const {
+								  const bool isBarrel = false) const {
 
   std::map<int, std::vector<int> > clueClusters;
   Points<2> cluePoints;
@@ -178,54 +160,54 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
     std::chrono::duration<double> elapsed = finish - start;
     debug() << "ClueGaudiAlgorithmWrapper (barrel): Elapsed time: " << elapsed.count() * 1000 << " ms" << endmsg;
 
-//    clueClusters = clueAlgoBarrel_.getClusters();
+    clueClusters = clueAlgoBarrel_.getClusters(cluePoints);
 //    cluePoints = clueAlgoBarrel_.getPoints();
-//    clueAlgoBarrel_.clearLayerTiles();
-//
+    clueAlgoBarrel_.clearLayerTiles(*queue_, 256);
+
   } else {
     info() << "... in the endcap" << endmsg;
 
     if(clueAlgoEndcap_.clearAndSetPoints(cluePoints, *queue_, 256))
       throw error() << "Error in setting the clue points for the endcap." << endmsg;
 
-//    auto start = std::chrono::high_resolution_clock::now();
-//    clueAlgoEndcap_.makeClusters();
-//    auto finish = std::chrono::high_resolution_clock::now();
-//    std::chrono::duration<double> elapsed = finish - start;
-//    //std::cout << "Iteration " << rep;
-//    debug() << "ClueGaudiAlgorithmWrapper (endcap): Elapsed time: " << elapsed.count() * 1000 << " ms" << endmsg;
-//
-//    clueClusters = clueAlgoEndcap_.getClusters();
+    auto start = std::chrono::high_resolution_clock::now();
+    clueAlgoEndcap_.makeClusters(cluePoints, *queue_, 256);
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    //std::cout << "Iteration " << rep;
+    debug() << "ClueGaudiAlgorithmWrapper (endcap): Elapsed time: " << elapsed.count() * 1000 << " ms" << endmsg;
+
+    clueClusters = clueAlgoEndcap_.getClusters(cluePoints);
 //    cluePoints = clueAlgoEndcap_.getPoints();
-//    clueAlgoEndcap_.clearLayerTiles();
+    clueAlgoEndcap_.clearLayerTiles(*queue_, 256);
   }
 
   info() << "Finished running CLUE algorithm" << endmsg;
 
-//  // Including CLUE info in cluePoints
-//  for(size_t i = 0; i < cluePoints.n; i++){
-//
-//    clue_hits[i].setRho(cluePoints.rho[i]);
-//    clue_hits[i].setDelta(cluePoints.delta[i]);
-//    clue_hits[i].setClusterIndex(cluePoints.clusterIndex[i]);
-///*
-//    debug() << "CLUE Point #" << i <<" : (x,y,z) = ("
-//           << clue_hits[i].getPosition().x << ","
-//           << clue_hits[i].getPosition().y << ","
-//           << clue_hits[i].getPosition().z << ")";
-//*/
-//    if(cluePoints.isSeed[i] == 1){
-////      debug() << " is seed" << endmsg;
-//      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::seed);
-//    } else if (cluePoints.clusterIndex[i] == -1) {
-////      debug() << " is outlier" << endmsg;
-//      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::outlier);
-//    } else {
-////      debug() << " is follower of cluster #" << cluePoints.clusterIndex[i] << endmsg;
-//      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::follower);
-//    }
-//
-//  }
+  // Including CLUE info in cluePoints
+  for(size_t i = 0; i < cluePoints.n; i++){
+
+    clue_hits[i].setRho(cluePoints.rho[i]);
+    clue_hits[i].setDelta(cluePoints.delta[i]);
+    clue_hits[i].setClusterIndex(cluePoints.clusterIndex[i]);
+/*
+    debug() << "CLUE Point #" << i <<" : (x,y,z) = ("
+           << clue_hits[i].getPosition().x << ","
+           << clue_hits[i].getPosition().y << ","
+           << clue_hits[i].getPosition().z << ")";
+*/
+    if(cluePoints.isSeed[i] == 1){
+//      debug() << " is seed" << endmsg;
+      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::seed);
+    } else if (cluePoints.clusterIndex[i] == -1) {
+//      debug() << " is outlier" << endmsg;
+      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::outlier);
+    } else {
+//      debug() << " is follower of cluster #" << cluePoints.clusterIndex[i] << endmsg;
+      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::follower);
+    }
+
+  }
 
   return clueClusters;
 }

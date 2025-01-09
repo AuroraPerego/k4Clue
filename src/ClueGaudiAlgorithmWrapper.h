@@ -47,7 +47,7 @@ public:
 
   void fillCLUEPoints(Points<2> clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const;
   std::map<int, std::vector<int> > runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                                           bool isBarrel) const;
+                                           const bool isBarrel) const;
 
   void fillFinalClusters(std::vector<clue::CLUECalorimeterHit>& clue_hits,
                          const std::map<int, std::vector<int> > clusterMap,
@@ -70,6 +70,7 @@ public:
   // Handle to read the calo cells and their cellID
   mutable DataHandle<edm4hep::CalorimeterHitCollection> EB_calo_handle {"BarrelInputHits", Gaudi::DataHandle::Reader, this};
   mutable DataHandle<edm4hep::CalorimeterHitCollection> EE_calo_handle {"EndcapInputHits", Gaudi::DataHandle::Reader, this};
+  //MetaDataHandle<std::string> cellIDHandle {EB_calo_handle, edm4hep::labels::CellIDEncoding, Gaudi::DataHandle::Reader};
   MetaDataHandle<std::string> cellIDHandle {EB_calo_handle, edm4hep::labels::CellIDEncoding, Gaudi::DataHandle::Reader};
 
   // CLUE Algo

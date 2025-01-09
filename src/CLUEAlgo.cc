@@ -52,7 +52,7 @@ void CLUEAlgo_T<TILES>::makeClusters(){
   if(verbose_)
     std::cout << "ClueGaudiAlgorithmWrapper: calculateDistanceToHigher: " << elapsed.count() *1000 << " ms" << std::endl;
 
-  findAndAssignClusters();  
+  findAndAssignClusters();
 
   auto finishTOT = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsedTOT = finishTOT - startTOT;
@@ -63,7 +63,7 @@ void CLUEAlgo_T<TILES>::makeClusters(){
 template <typename TILES>
 std::map<int, std::vector<int> > CLUEAlgo_T<TILES>::getClusters(){
   // cluster all points with same clusterId
-  std::map<int, std::vector<int> > clusters; 
+  std::map<int, std::vector<int> > clusters;
   for(unsigned i = 0; i < points_.n; i++) {
     clusters[points_.clusterIndex[i]].push_back(i);
   }
@@ -104,7 +104,7 @@ void CLUEAlgo_T<TILES>::calculateLocalDensity(){
     // loop over bins in the search box
     for(int xBin = search_box[0]; xBin <= search_box[1]; ++xBin) {
       for(int yBin = search_box[2]; yBin <= search_box[3]; ++yBin) {
-  
+
         // get the id of this bin
         int binId = lt.getGlobalBinByBin(xBin,yBin);
         if(!TILES::constants_type_t::endcap){
@@ -126,7 +126,7 @@ void CLUEAlgo_T<TILES>::calculateLocalDensity(){
             points_.rho[i] += (i == static_cast<unsigned int>(j) ? 1.f : 0.5f) * points_.weight[j];
           }
         } // end of interate inside this bin
-      } 
+      }
     } // end of loop over bins in search box
   } // end of loop over points
 
@@ -151,7 +151,7 @@ void CLUEAlgo_T<TILES>::calculateDistanceToHigher(){
     //get search box
     const auto& lt = allLayerTiles_[points_.layer[i]];
     float dm_phi = dm*inv_ri;
-    std::array<int,4> search_box = TILES::constants_type_t::endcap ? 
+    std::array<int,4> search_box = TILES::constants_type_t::endcap ?
      lt.searchBox(xi-dm, xi+dm, yi-dm, yi+dm):
      lt.searchBoxPhiZ(phi_i-dm_phi, phi_i+dm_phi, points_.y[i]-dm, points_.y[i]+dm);
 
@@ -213,7 +213,7 @@ void CLUEAlgo_T<TILES>::findAndAssignClusters(){
     float deltai = points_.delta[i];
     float rhoi = points_.rho[i];
 
-    // determine seed or outlier 
+    // determine seed or outlier
     bool isSeed = (deltai > dc_) and (rhoi >= rhoc_);
     bool isOutlier = (deltai > outlierDeltaFactor_ * dc_) and (rhoi < rhoc_);
     if (isSeed)
@@ -230,7 +230,7 @@ void CLUEAlgo_T<TILES>::findAndAssignClusters(){
     else if (!isOutlier)
       {
 	// register as follower at its nearest higher
-	points_.followers[points_.nearestHigher[i]].push_back(i);   
+	points_.followers[points_.nearestHigher[i]].push_back(i);
       }
   }
 
@@ -280,7 +280,7 @@ inline float CLUEAlgo_T<TILES>::distance2(int i, int j, bool isPhi, float r ) co
   } else {
     return std::numeric_limits<float>::max();
   }
-
+  return std::numeric_limits<float>::max();
 }
 
 template <typename TILES>
@@ -292,7 +292,7 @@ inline float CLUEAlgo_T<TILES>::distance(int i, int j, bool isPhi, float r ) con
   } else {
     return std::numeric_limits<float>::max();
   }
-
+  return std::numeric_limits<float>::max();
 }
 
 // explicit template instantiation
