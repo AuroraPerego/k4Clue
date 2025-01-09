@@ -37,11 +37,11 @@ namespace alpakatools {
       }
 
       // use a custom deleter to destroy all objects and deallocate the memory
-      auto deleter = [size](Allocator* ptr) {
+      auto deleter = [size](Allocator* pointer) {
         for (size_t i = size; i > 0; --i) {
-          (ptr + i - 1)->~Allocator();
+          (pointer + i - 1)->~Allocator();
         }
-        std::allocator<Allocator>().deallocate(ptr, size);
+        std::allocator<Allocator>().deallocate(pointer, size);
       };
 
       return std::unique_ptr<Allocator[], decltype(deleter)>(ptr, deleter);
@@ -51,13 +51,11 @@ namespace alpakatools {
 
   template <typename TDevice, typename TQueue>
   inline CachingAllocator<TDevice, TQueue>& getDeviceCachingAllocator(TDevice const& device) {
-    using Platform = alpaka::Platform<TDevice>;
-
     // initialise all allocators, one per device
     static auto allocators = detail::allocate_device_allocators<TDevice, TQueue>();
 
     size_t const index = getDeviceIndex(device);
-    assert(index < alpakatools::devices<Platform>().size());
+    assert(index < alpakatools::devices<alpaka::Platform<TDevice>>().size());
 
     // the public interface is thread safe
     return allocators[index];

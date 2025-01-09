@@ -5,6 +5,7 @@
 // Author: Felice Pantaleo, CERN
 //
 
+#include <alpaka/core/Common.hpp>
 #include <alpaka/core/Positioning.hpp>
 
 namespace alpakatools {

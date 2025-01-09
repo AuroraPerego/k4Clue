@@ -17,9 +17,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   struct KernelResetTiles {
     template <typename TAcc, typename TConstants>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  TilesAlpaka_T<TAcc, TConstants>* tiles,
-                                  uint32_t nTiles) const {
+    ALPAKA_FN_ACC void operator()(TAcc const&,
+                                  TilesAlpaka_T<TAcc, TConstants>* tiles) const {
+                                  //uint32_t nTiles) const {
   //    for (auto index : alpaka::uniformElements(acc, nTiles)) {
         tiles->clear();
   //    };
@@ -63,14 +63,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       int binSize{static_cast<int>((*tiles)[binId].size())};
 
       // iterate inside this bin
-      for (int binIter{}; binIter < binSize; ++binIter) {
-        uint32_t j{(*tiles)[binId][binIter]};
+      for (int binIter = 0; binIter < binSize; ++binIter) {
+        uint32_t j = (*tiles)[binId][binIter];
         // query N_{dc_}(i)
 
         VecArray<float, nDim> coords_j{dev_points->coords[j]};
 
-        float dist_ij_sq{0.f};
-        for (int dim{}; dim != nDim; ++dim) {
+        float dist_ij_sq = 0.f;
+        for (int dim = 0; dim != nDim; ++dim) {
           dist_ij_sq +=
               (coords_j[dim] - coords_i[dim]) * (coords_j[dim] - coords_i[dim]);
         }
@@ -85,7 +85,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       return;
     } else {
-      for (unsigned int i{search_box[search_box.capacity() - N_][0]};
+      for (unsigned int i = search_box[search_box.capacity() - N_][0];
            i <= search_box[search_box.capacity() - N_][1]; ++i) {
         base_vec[base_vec.capacity() - N_] = i;
         for_recursion<TAcc, nDim, N_ - 1>(acc, base_vec, search_box, tiles,
@@ -102,14 +102,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         const TAcc& acc, TilesAlpaka_T<TAcc, TConstants>* dev_tiles,
         PointsAlpakaView<nDim>* dev_points, const KernelType& kernel,
         /* const VecArray<VecArray<float, 2>, nDim>& domains, */
-        float dc, uint32_t n_points) const {
-      alpakatools::for_each_element_in_grid(acc, n_points, [&](uint32_t i) {
-        float rho_i{0.f};
+        float dc, uint32_t nPoints) const {
+      for (auto i : alpaka::uniformElements(acc, nPoints)) {
+        float rho_i = 0.f;
         VecArray<float, nDim> coords_i{dev_points->coords[i]};
 
         // Get the extremes of the search box
         VecArray<VecArray<float, 2>, nDim> searchbox_extremes;
-        for (int dim{}; dim != nDim; ++dim) {
+        for (int dim = 0; dim != nDim; ++dim) {
           VecArray<float, 2> dim_extremes;
           dim_extremes.push_back_unsafe(coords_i[dim] - dc);
           dim_extremes.push_back_unsafe(coords_i[dim] + dc);
@@ -127,7 +127,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         i);
 
         dev_points->rho[i] = rho_i;
-      });
+      };
     }
   };
 
@@ -263,13 +263,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   VecArray<int, max_seeds>* seeds,
                                   VecArray<int, max_followers>* followers,
                                   PointsAlpakaView<nDim>* dev_points) const {
-      const auto& seeds_0{seeds[0]};
-      const auto n_seeds{seeds_0.size()};
-      alpakatools::for_each_element_in_grid(acc, n_seeds, [&](uint32_t idx_cls) {
+      const auto n_seeds = seeds->size();
+      for (auto idx_cls : alpaka::uniformElements(acc, n_seeds)) {
         int local_stack[256] = {-1};
-        int local_stack_size{};
+        int local_stack_size = 0;
 
-        int idx_this_seed{seeds_0[idx_cls]};
+        int idx_this_seed = (*seeds)[idx_cls];
         dev_points->cluster_index[idx_this_seed] = idx_cls;
         // push_back idThisSeed to localStack
         local_stack[local_stack_size] = idx_this_seed;
@@ -295,7 +294,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             ++local_stack_size;
           }
         }
-      });
+      };
     }
   };
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

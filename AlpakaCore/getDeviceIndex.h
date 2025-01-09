@@ -15,7 +15,7 @@ namespace alpakatools {
   }
 
   // overload for DevCpu
-  inline int getDeviceIndex(alpaka::DevCpu const& device) { return 0; }
+  inline int getDeviceIndex(alpaka::DevCpu const& /*device*/) { return 0; }
 
 #ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
   // overload for DevCudaRt

@@ -27,7 +27,7 @@ struct CLDBarrelLayerTilesConstants2D {
   static constexpr bool wrapped[nDim] = {false, true};
   static constexpr uint32_t maxTileDepth = 40;
   static constexpr uint32_t maxNTiles = 1 << 10;
-  static constexpr int nLayers = 40;
+  static constexpr uint32_t nLayers = 40;
 };
 
 struct CLDEndcapLayerTilesConstants2D {
@@ -39,7 +39,7 @@ struct CLDEndcapLayerTilesConstants2D {
   static constexpr bool wrapped[nDim] = {false, false};
   static constexpr uint32_t maxTileDepth = 40;
   static constexpr uint32_t maxNTiles = 1 << 10;
-  static constexpr int nLayers = 80;
+  static constexpr uint32_t nLayers = 80;
 };
 
 struct CLICdetBarrelLayerTilesConstants2D {
@@ -51,7 +51,7 @@ struct CLICdetBarrelLayerTilesConstants2D {
   static constexpr bool wrapped[nDim] = {false, true};
   static constexpr uint32_t maxTileDepth = 40;
   static constexpr uint32_t maxNTiles = 1 << 10;
-  static constexpr int nLayers = 40;
+  static constexpr uint32_t nLayers = 40;
 };
 
 struct CLICdetEndcapLayerTilesConstants2D {
@@ -63,7 +63,7 @@ struct CLICdetEndcapLayerTilesConstants2D {
   static constexpr bool wrapped[nDim] = {false, false};
   static constexpr uint32_t maxTileDepth = 40;
   static constexpr uint32_t maxNTiles = 1 << 10;
-  static constexpr int nLayers = 80;
+  static constexpr uint32_t nLayers = 80;
 };
 
 struct LArBarrelLayerTilesConstants2D {
@@ -75,7 +75,7 @@ struct LArBarrelLayerTilesConstants2D {
   static constexpr bool wrapped[nDim] = {false, true};
   static constexpr uint32_t maxTileDepth = 40;
   static constexpr uint32_t maxNTiles = 1 << 10;
-  static constexpr int nLayers = 12;
+  static constexpr uint32_t nLayers = 12;
 };
 
 #endif  // TilesConstants_h
