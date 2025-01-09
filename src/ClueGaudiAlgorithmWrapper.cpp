@@ -146,7 +146,7 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
   fillCLUEPoints(cluePoints, clue_hits);
 
   // Run CLUE
-  info() << "Running CLUEAlgo ... " << endmsg;
+  info() << "Running CLUEAlgo on device " << alpaka::getName(alpaka::getDev(*queue_)) << " ... " << endmsg;
   if (isBarrel){
     info() << "... in the barrel" << endmsg;
 

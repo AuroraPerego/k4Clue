@@ -1,6 +1,6 @@
 // g++ -std=c++20 -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED -I/eos/user/a/aperego/fcc/alpaka/include -isystem /cvmfs/cms.cern.ch/el8_amd64_gcc12/external/boost/1.80.0-477823d53efabc5118f199265eb7ab49/include -Wall src/alpaka/CLUEAlgoAlpaka.cc -c -o CLUEAlgoAlpaka.cc.o -I/eos/user/a/aperego/fcc/k4Clue/include -I/eos/user/a/aperego/fcc/k4Clue -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_PRESENT  -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_SYNC_BACKEND
 
-#include "include/alpaka/CLUEAlgoAlpaka.hpp"
+#include "include/alpaka/CLUEAlgoAlpaka.h"
 
 template<typename TAcc>
 using CLICdetEndcapLayerTiles = TilesAlpaka_T<TAcc, CLICdetEndcapLayerTilesConstants2D>;

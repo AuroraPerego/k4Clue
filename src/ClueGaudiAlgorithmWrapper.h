@@ -29,7 +29,7 @@
 #include <edm4hep/ClusterCollection.h>
 #include <edm4hep/Constants.h>
 #include "CLUECalorimeterHit.h"
-#include "include/alpaka/CLUEAlgoAlpaka.hpp"
+#include "include/alpaka/CLUEAlgoAlpaka.h"
 
 class ClueGaudiAlgorithmWrapper : public Gaudi::Algorithm {
 public:

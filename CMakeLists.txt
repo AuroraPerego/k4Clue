@@ -39,7 +39,20 @@ find_package(EDM4HEP REQUIRED)
 find_package(k4FWCore REQUIRED)
 find_package(Gaudi REQUIRED)
 
-find_package(alpaka REQUIRED)
+#will become this when alpaka will be in cvmfs in key4hep
+#find_package(alpaka REQUIRED)
+
+find_package(Boost 1.75.0 REQUIRED)
+
+include(FetchContent)
+
+FetchContent_Declare(
+  alpaka
+  GIT_REPOSITORY https://github.com/alpaka-group/alpaka.git
+  GIT_TAG fe9436d57e25b07dc73b8b042a0b3eec499956d0 # 1.2.0
+  GIT_SHALLOW TRUE
+  FIND_PACKAGE_ARGS)
+FetchContent_MakeAvailable(alpaka)
 
 include(CTest)
 

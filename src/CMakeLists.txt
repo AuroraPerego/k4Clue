@@ -19,15 +19,24 @@ limitations under the License.
 
 # Optionally glob, but only for CMake 3.12 or later: file(GLOB HEADER_LIST
 # CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/modern/*.hpp")
-set(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/*.h")
+set(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/*.h" "${PROJECT_SOURCE_DIR}/include/alpaka/*.h")
 
 ## Make an automatic library - will be static or dynamic based on user setting
-add_library(CLUEAlgo_lib CLUEAlgo.cc ${HEADER_LIST})
+add_library(CLUEAlgo_lib alpaka/CLUEAlgoAlpaka.cc ${HEADER_LIST})
 
 # We need this directory, and users of our library will need it too
 target_include_directories(CLUEAlgo_lib PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${alpaka_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+# alpaka build flags
+target_compile_options(
+  CLUEAlgo_lib
+  PRIVATE -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED
+          -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_SYNC_BACKEND)
 
 install(TARGETS CLUEAlgo_lib ${INSTALL_LIBRARIES}
   EXPORT CLUEAlgoTarget
