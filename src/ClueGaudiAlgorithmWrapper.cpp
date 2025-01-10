@@ -119,7 +119,7 @@ void ClueGaudiAlgorithmWrapper::printTimingReport(std::vector<float> &vals, int 
 }
 
 
-void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2> clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const {
+void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2>& clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const {
 
   clue_points.coords.reserve(clue_hits.size());
   for (const auto& ch : clue_hits) {
