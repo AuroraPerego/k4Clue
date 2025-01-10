@@ -35,6 +35,7 @@ gaudi_add_module(ClueGaudiAlgorithmWrapper
     DD4hep::DDCore
     EDM4HEP::edm4hep
     CLUEAlgo_lib
+    AlpakaCore_lib
 )
 
 target_include_directories(ClueGaudiAlgorithmWrapper PUBLIC

@@ -56,4 +56,5 @@ FetchContent_MakeAvailable(alpaka)
 
 include(CTest)
 
+add_subdirectory(AlpakaCore)
 add_subdirectory(src)
