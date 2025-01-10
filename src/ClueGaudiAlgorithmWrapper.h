@@ -45,7 +45,7 @@ public:
   void printTimingReport(std::vector<float> &vals, int repeats,
                        const std::string label) ;
 
-  void fillCLUEPoints(Points<2> clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const;
+  void fillCLUEPoints(Points<2>& clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const;
   std::map<int, std::vector<int> > runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
                                            const bool isBarrel) const;
 

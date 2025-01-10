@@ -5,7 +5,6 @@
 #include "AlpakaCore/config.h"
 #include "AlpakaCore/alpaka/devices.h"
 #include "AlpakaCore/initialise.h"
-#include "Framework/demangle.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -20,13 +19,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         std::cout << "  - " << alpaka::getName(device) << std::endl;
       }
       if (verbose) {
-        std::cout << edm::demangle<Platform> << " platform succesfully initialised." << std::endl;
+        std::cout << alpaka::core::demangled<Platform> << " platform succesfully initialised." << std::endl;
       }
       std::cout << std::endl;
       done = true;
     } else {
       if (verbose) {
-        std::cout << edm::demangle<Platform> << " platform already initialised." << std::endl;
+        std::cout << alpaka::core::demangled<Platform> << " platform already initialised." << std::endl;
         std::cout << std::endl;
       }
     }

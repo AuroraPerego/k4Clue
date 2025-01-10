@@ -31,7 +31,8 @@ struct Points {
   Points() = default;
   Points(const std::vector<VecArray<float, nDim>>& in_coords,
          const std::vector<float>& in_weight)
-      : coords{in_coords}, weight{in_weight}, n{weight.size()} {
+      : coords{in_coords}, weight{in_weight} {
+    const auto n = weight.size();
     rho.resize(n);
     delta.resize(n);
     nearestHigher.resize(n);
@@ -39,7 +40,8 @@ struct Points {
     isSeed.resize(n);
   }
   Points(const std::vector<std::vector<float>>& in_coords, const std::vector<float>& in_weight)
-      : weight{in_weight}, n{weight.size()} {
+      : weight{in_weight} {
+    const auto n = weight.size();
     for (const auto& x : in_coords) {
       VecArray<float, nDim> temp_vecarray;
       for (auto value : x) {
@@ -66,9 +68,9 @@ struct Points {
     clusterIndex.clear();
     followers.clear();
     isSeed.clear();
-
-    n = 0;
   }
+
+  size_t size () const {return coords.size();}
 
   std::vector<VecArray<float, nDim>> coords;
   std::vector<float> addCoord;
@@ -82,8 +84,6 @@ struct Points {
   // https://en.cppreference.com/w/cpp/container/vector_bool
   // std::vector<bool> behaves similarly to std::vector, but in order to be space efficient, it:
   // Does not necessarily store its elements as a contiguous array (so &v[0] + n != &v[n])
-
-  size_t n;
 
   // missing in cluestering
   std::vector<int> layer;

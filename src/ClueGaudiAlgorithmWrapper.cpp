@@ -122,6 +122,9 @@ void ClueGaudiAlgorithmWrapper::printTimingReport(std::vector<float> &vals, int 
 void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2>& clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const {
 
   clue_points.coords.reserve(clue_hits.size());
+  clue_points.addCoord.reserve(clue_hits.size());
+  clue_points.weight.reserve(clue_hits.size());
+  clue_points.layer.reserve(clue_hits.size());
   for (const auto& ch : clue_hits) {
     VecArray<float, 2> temp_vecarray;
     if(ch.inBarrel()){
@@ -133,6 +136,8 @@ void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2>& clue_points, const std
     }
     clue_points.coords.push_back(temp_vecarray);
     clue_points.addCoord.push_back(ch.getR());
+    clue_points.weight.push_back(ch.getEnergy());
+    clue_points.layer.push_back(ch.getLayer());
   }
 }
 
@@ -150,7 +155,7 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
   if (isBarrel){
     info() << "... in the barrel" << endmsg;
 
-    if(clueAlgoBarrel_.clearAndSetPoints(cluePoints, *queue_, 256))
+    if(not clueAlgoBarrel_.clearAndSetPoints(cluePoints, *queue_, 256))
       throw error() << "Error in setting the clue points for the barrel." << endmsg;
 
     // measure excution time of makeClusters
@@ -167,7 +172,7 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
   } else {
     info() << "... in the endcap" << endmsg;
 
-    if(clueAlgoEndcap_.clearAndSetPoints(cluePoints, *queue_, 256))
+    if(not clueAlgoEndcap_.clearAndSetPoints(cluePoints, *queue_, 256))
       throw error() << "Error in setting the clue points for the endcap." << endmsg;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -185,7 +190,7 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
   info() << "Finished running CLUE algorithm" << endmsg;
 
   // Including CLUE info in cluePoints
-  for(size_t i = 0; i < cluePoints.n; i++){
+  for(size_t i = 0; i < cluePoints.size(); i++){
 
     clue_hits[i].setRho(cluePoints.rho[i]);
     clue_hits[i].setDelta(cluePoints.delta[i]);

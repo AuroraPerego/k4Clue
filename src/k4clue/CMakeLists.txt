@@ -42,7 +42,7 @@ target_include_directories(ClueGaudiAlgorithmWrapper PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
   $<BUILD_INTERFACE:${alpaka_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${Boost_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
 )
 
 # alpaka build flags

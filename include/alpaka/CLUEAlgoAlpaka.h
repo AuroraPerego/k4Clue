@@ -86,9 +86,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TAcc, typename TTile, typename TConv>
   bool CLUEAlgoAlpaka_T<TAcc, TTile, TConv>::clearAndSetPoints(
       const Points<2>& h_points, Queue& queue, std::size_t block_size) {
-    if (not h_points.n) return false;
+    if (not h_points.size()) return false;
 
-    d_points->nPoints = h_points.n;
+    d_points->nPoints = h_points.size();
 
     const Idx tiles_grid_size =
         alpakatools::divide_up_by(tiles::nTiles<TTile>(), block_size);
@@ -97,22 +97,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::exec<Acc1D>(queue, tiles_work_div, KernelResetTiles{},
                         d_tiles->data()); //, tiles::nTiles<TTile>());
 
-    const Idx grid_size = alpakatools::divide_up_by(h_points.n, block_size);
+    const Idx grid_size = alpakatools::divide_up_by(h_points.size(), block_size);
     const auto work_div = alpakatools::make_workdiv<Acc1D>(grid_size, block_size);
     alpaka::exec<Acc1D>(queue, work_div, KernelResetFollowers{},
-                        d_followers->data(), h_points.n);
+                        d_followers->data(), h_points.size());
 
     alpaka::memcpy(
         queue, d_points->coords,
-        alpakatools::make_host_view(h_points.coords.data(), h_points.n));
+        alpakatools::make_host_view(h_points.coords.data(), h_points.size()));
     alpaka::memcpy(
         queue,
         d_points->addCoord,
-        alpakatools::make_host_view(h_points.addCoord.data(), h_points.n));
+        alpakatools::make_host_view(h_points.addCoord.data(), h_points.size()));
     alpaka::memcpy(
         queue, d_points->weight,
-        alpakatools::make_host_view(h_points.weight.data(), h_points.n));
+        alpakatools::make_host_view(h_points.weight.data(), h_points.size()));
     alpaka::memset(queue, *d_seeds, 0x00);
+    alpaka::wait(queue);
 
     return true;
   }
@@ -246,7 +247,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   std::map<int, std::vector<int> > CLUEAlgoAlpaka_T<TAcc, TTile, TConv>::getClusters(Points<2> h_points){
     // cluster all points with same clusterId
     std::map<int, std::vector<int> > clusters;
-    for(size_t i = 0; i < h_points.n; i++) {
+    for(size_t i = 0; i < h_points.size(); i++) {
       clusters[h_points.clusterIndex[i]].push_back(i);
     }
     return clusters;
@@ -272,5 +273,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       CLUEAlgoAlpaka_T<Acc1D, CLDBarrelLayerTilesConstants2D>;
   using LArBarrelCLUEAlgo =
       CLUEAlgoAlpaka_T<Acc1D, LArBarrelLayerTilesConstants2D>;
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 #endif
