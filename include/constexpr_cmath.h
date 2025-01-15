@@ -40,7 +40,14 @@ namespace reco {
   // return a value of phi into interval [-pi,+pi]
   template <typename T>
   constexpr T normalizedPhi(T phi) {
-    return reduceRange(phi);
+    T remainder = phi - (static_cast<int>(phi / T(2. * M_PI))) * T(2. * M_PI);
+    // Ensure it's within [-pi, pi)
+    if (remainder >= T(M_PI)) {
+        remainder -= T(2. * M_PI);
+    } else if (remainder < -T(M_PI)) {
+        remainder += T(2. * M_PI);
+    }
+    return remainder;
   }
 
   template <typename T>

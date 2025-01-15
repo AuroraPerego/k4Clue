@@ -31,14 +31,14 @@ class TilesAlpaka_T {
 
   ALPAKA_FN_HOST_ACC inline int getBin(float coord, int dim) const {
     int coord_Bin;
-    if (T::wrapped[dim]) { // FIXME with dim it cannot be constexpr
+    if (T::wrapped[dim]) {
       coord_Bin =
-          static_cast<int>(reco::normalizedPhi(coord) / T::tileSize[dim]);
+          static_cast<int>((reco::normalizedPhi(coord) - T::MinMax[dim][0]) / T::tileSize[dim]);
     } else {
       coord_Bin =
           static_cast<int>((coord - T::MinMax[dim][0]) / T::tileSize[dim]);
 
-      // Address the cases of underflow and overflow and underflow
+      // Address the cases of underflow and overflow
       coord_Bin = alpaka::math::min(acc_, coord_Bin, nTilesPerDim(dim) - 1);
       coord_Bin = alpaka::math::max(acc_, coord_Bin, 0);
     }
@@ -49,20 +49,17 @@ class TilesAlpaka_T {
       const VecArray<float, T::nDim>& coords) const {
     int globalBin = getBin(coords[0], 0);
     for (int i = 1; i != T::nDim; ++i) {
-      if (T::wrapped[i]) { // FIXME with dim it cannot be constexpr
-        globalBin += nTilesPerDim(i) * getBin(coords[i], i);
-      } else {
-        globalBin += nTilesPerDim(i) * getBin(coords[i], i);
-      }
+      globalBin += nTilesPerDim(i-1) * getBin(coords[i], i);
     }
     return globalBin;
   }
 
   ALPAKA_FN_HOST_ACC inline int getGlobalBinByBin(
-      const VecArray<uint32_t, T::nDim>& Bins) const {
-    uint32_t globalBin{Bins[0]};
+      const VecArray<uint32_t, T::nDim>& bins) const {
+    uint32_t globalBin = T::wrapped[0] ? (bins[0] % nTilesPerDim(0)) : bins[0];
     for (int i = 1; i != T::nDim; ++i) {
-      globalBin += nTilesPerDim(i) * Bins[i];
+      auto bin_i = T::wrapped[i] ? (bins[i] % nTilesPerDim(i)) : bins[i];
+      globalBin += nTilesPerDim(i-1) * bin_i;
     }
     return globalBin;
   }
@@ -77,8 +74,12 @@ class TilesAlpaka_T {
       VecArray<VecArray<uint32_t, 2>, T::nDim>* search_box) {
     for (int dim = 0; dim != T::nDim; ++dim) {
       VecArray<uint32_t, 2> dim_sb;
-      dim_sb.push_back_unsafe(getBin(sb_extremes[dim][0], dim));
-      dim_sb.push_back_unsafe(getBin(sb_extremes[dim][1], dim));
+      auto infBin = getBin(sb_extremes[dim][0], dim);
+      auto supBin = getBin(sb_extremes[dim][1], dim);
+      if (T::wrapped[dim] and infBin > supBin)
+        supBin += nTilesPerDim(dim);
+      dim_sb.push_back_unsafe(infBin);
+      dim_sb.push_back_unsafe(supBin);
 
       search_box->push_back_unsafe(dim_sb);
     }

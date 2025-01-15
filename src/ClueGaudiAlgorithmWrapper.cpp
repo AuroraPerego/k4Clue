@@ -25,27 +25,37 @@
 // podio specific includes
 #include "DDSegmentation/BitFieldCoder.h"
 
-using namespace dd4hep ;
-using namespace DDSegmentation ;
+using namespace dd4hep;
+using namespace DDSegmentation;
 using namespace std;
 
 DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper)
 
-ClueGaudiAlgorithmWrapper::ClueGaudiAlgorithmWrapper(const std::string& name, ISvcLocator* pSL) :
-  Gaudi::Algorithm(name, pSL) {
-  declareProperty("BarrelCaloHitsCollection", EB_calo_handle, "Collection for Barrel Calo Hits used in input");
-  declareProperty("EndcapCaloHitsCollection", EE_calo_handle, "Collection for Endcap Calo Hits used in input");
+ClueGaudiAlgorithmWrapper::ClueGaudiAlgorithmWrapper(const std::string& name,
+                                                     ISvcLocator* pSL)
+    : Gaudi::Algorithm(name, pSL) {
+  declareProperty("BarrelCaloHitsCollection",
+                  EB_calo_handle,
+                  "Collection for Barrel Calo Hits used in input");
+  declareProperty("EndcapCaloHitsCollection",
+                  EE_calo_handle,
+                  "Collection for Endcap Calo Hits used in input");
   declareProperty("CriticalDistance", dc, "Used to compute the local density");
-  declareProperty("MinLocalDensity", rhoc, "Minimum local density for a point to be promoted as a Seed");
-  declareProperty("OutlierDeltaFactor", outlierDeltaFactor, "Multiplicative constant to be applied to CriticalDistance");
+  declareProperty("MinLocalDensity",
+                  rhoc,
+                  "Minimum local density for a point to be promoted as a Seed");
+  declareProperty("OutlierDeltaFactor",
+                  outlierDeltaFactor,
+                  "Multiplicative constant to be applied to CriticalDistance");
   declareProperty("OutClusters", clustersHandle, "Clusters collection (output)");
-  declareProperty("OutCaloHits", caloHitsHandle, "Calo hits collection created from Clusters (output)");
+  declareProperty("OutCaloHits",
+                  caloHitsHandle,
+                  "Calo hits collection created from Clusters (output)");
 }
 
 StatusCode ClueGaudiAlgorithmWrapper::initialize() {
-
   bool clue_verbose = false;
-  if (msgLevel(MSG::INFO) || msgLevel(MSG::DEBUG)){
+  if (msgLevel(MSG::INFO) || msgLevel(MSG::DEBUG)) {
     clue_verbose = true;
   }
 
@@ -57,42 +67,46 @@ StatusCode ClueGaudiAlgorithmWrapper::initialize() {
   Dev const devAcc(alpaka::getDevByIdx(platform, 0u));
   queue_ = std::make_optional<Queue>(devAcc);
 
-
   auto start = std::chrono::high_resolution_clock::now();
-  clueAlgoBarrel_ = ALPAKA_ACCELERATOR_NAMESPACE::CLICdetBarrelCLUEAlgo(dc, rhoc, outlierDeltaFactor, *queue_, clue_verbose);
+  clueAlgoBarrel_ = ALPAKA_ACCELERATOR_NAMESPACE::CLICdetBarrelCLUEAlgo(
+      dc, rhoc, outlierDeltaFactor, *queue_, clue_verbose);
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
-  info() << "ClueGaudiAlgorithmWrapper: Set up time (Barrel): " << elapsed.count() * 1000 << " ms" << endmsg;
+  info() << "ClueGaudiAlgorithmWrapper: Set up time (Barrel): " << elapsed.count() * 1000
+         << " ms" << endmsg;
 
   start = std::chrono::high_resolution_clock::now();
-  clueAlgoEndcap_ = ALPAKA_ACCELERATOR_NAMESPACE::CLICdetEndcapCLUEAlgo(dc, rhoc, outlierDeltaFactor, *queue_, clue_verbose);
+  clueAlgoEndcap_ = ALPAKA_ACCELERATOR_NAMESPACE::CLICdetEndcapCLUEAlgo(
+      dc, rhoc, outlierDeltaFactor, *queue_, clue_verbose);
   finish = std::chrono::high_resolution_clock::now();
   elapsed = finish - start;
-  info() << "ClueGaudiAlgorithmWrapper: Set up time (Endcap): " << elapsed.count() * 1000 << " ms" << endmsg;
+  info() << "ClueGaudiAlgorithmWrapper: Set up time (Endcap): " << elapsed.count() * 1000
+         << " ms" << endmsg;
 
   return Algorithm::initialize();
-
 }
 
-void ClueGaudiAlgorithmWrapper::exclude_stats_outliers(std::vector<float> &v) {
+void ClueGaudiAlgorithmWrapper::exclude_stats_outliers(std::vector<float>& v) {
   if (v.size() == 1)
     return;
   float mean = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
-  float sum_sq_diff = std::accumulate(
-      v.begin(), v.end(), 0.0,
-      [mean](float acc, float val) { return acc + (val - mean) * (val - mean); });
+  float sum_sq_diff =
+      std::accumulate(v.begin(), v.end(), 0.0, [mean](float acc, float val) {
+        return acc + (val - mean) * (val - mean);
+      });
   float stddev = std::sqrt(sum_sq_diff / (v.size() - 1));
   std::cout << "Sigma cut outliers: " << stddev << std::endl;
   float z_score_threshold = 3.0;
-  v.erase(std::remove_if(v.begin(), v.end(),
+  v.erase(std::remove_if(v.begin(),
+                         v.end(),
                          [mean, stddev, z_score_threshold](float val) {
-            float z_score = std::abs(val - mean) / stddev;
-            return z_score > z_score_threshold;
-          }),
+                           float z_score = std::abs(val - mean) / stddev;
+                           return z_score > z_score_threshold;
+                         }),
           v.end());
 }
 
-std::pair<float, float> ClueGaudiAlgorithmWrapper::stats(const std::vector<float> &v) {
+std::pair<float, float> ClueGaudiAlgorithmWrapper::stats(const std::vector<float>& v) {
   float m = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
   float sum = std::accumulate(v.begin(), v.end(), 0.0, [m](float acc, float val) {
     return acc + (val - m) * (val - m);
@@ -101,33 +115,34 @@ std::pair<float, float> ClueGaudiAlgorithmWrapper::stats(const std::vector<float
   return {m, std::sqrt(sum / den)};
 }
 
-void ClueGaudiAlgorithmWrapper::printTimingReport(std::vector<float> &vals, int repeats,
-                       const std::string label) {
+void ClueGaudiAlgorithmWrapper::printTimingReport(std::vector<float>& vals,
+                                                  int repeats,
+                                                  const std::string label) {
   int precision = 2;
   float mean = 0.f;
   float sigma = 0.f;
   exclude_stats_outliers(vals);
   tie(mean, sigma) = stats(vals);
   std::cout << label << " 1 outliers(" << repeats << "/" << vals.size() << ") "
-            << std::fixed << std::setprecision(precision) << mean << " +/- "
-            << sigma << " [ms]" << std::endl;
+            << std::fixed << std::setprecision(precision) << mean << " +/- " << sigma
+            << " [ms]" << std::endl;
   exclude_stats_outliers(vals);
   tie(mean, sigma) = stats(vals);
   std::cout << label << " 2 outliers(" << repeats << "/" << vals.size() << ") "
-            << std::fixed << std::setprecision(precision) << mean << " +/- "
-            << sigma << " [ms]" << std::endl;
+            << std::fixed << std::setprecision(precision) << mean << " +/- " << sigma
+            << " [ms]" << std::endl;
 }
 
-
-void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2>& clue_points, const std::vector<clue::CLUECalorimeterHit>& clue_hits) const {
-
+void ClueGaudiAlgorithmWrapper::fillCLUEPoints(
+    Points<2>& clue_points,
+    const std::vector<clue::CLUECalorimeterHit>& clue_hits) const {
   clue_points.coords.reserve(clue_hits.size());
   clue_points.addCoord.reserve(clue_hits.size());
   clue_points.weight.reserve(clue_hits.size());
   clue_points.layer.reserve(clue_hits.size());
   for (const auto& ch : clue_hits) {
     VecArray<float, 2> temp_vecarray;
-    if(ch.inBarrel()){
+    if (ch.inBarrel()) {
       temp_vecarray.push_back_unsafe(ch.getPosition().z);
       temp_vecarray.push_back_unsafe(ch.getPhi());
     } else {
@@ -141,9 +156,8 @@ void ClueGaudiAlgorithmWrapper::fillCLUEPoints(Points<2>& clue_points, const std
   }
 }
 
-std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-								  const bool isBarrel = false) const {
-
+std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(
+    std::vector<clue::CLUECalorimeterHit>& clue_hits, const bool isBarrel = false) const {
   std::map<int, std::vector<int> > clueClusters;
   Points<2> cluePoints;
 
@@ -151,11 +165,12 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
   fillCLUEPoints(cluePoints, clue_hits);
 
   // Run CLUE
-  info() << "Running CLUEAlgo on device " << alpaka::getName(alpaka::getDev(*queue_)) << " ... " << endmsg;
-  if (isBarrel){
+  info() << "Running CLUEAlgo on device " << alpaka::getName(alpaka::getDev(*queue_))
+         << " ... " << endmsg;
+  if (isBarrel) {
     info() << "... in the barrel" << endmsg;
 
-    if(not clueAlgoBarrel_.clearAndSetPoints(cluePoints, *queue_, 256))
+    if (not clueAlgoBarrel_.clearAndSetPoints(cluePoints, *queue_, 256))
       throw error() << "Error in setting the clue points for the barrel." << endmsg;
 
     // measure excution time of makeClusters
@@ -163,16 +178,16 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
     clueAlgoBarrel_.makeClusters(cluePoints, *queue_, 256);
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    debug() << "ClueGaudiAlgorithmWrapper (barrel): Elapsed time: " << elapsed.count() * 1000 << " ms" << endmsg;
+    debug() << "ClueGaudiAlgorithmWrapper (barrel): Elapsed time: "
+            << elapsed.count() * 1000 << " ms" << endmsg;
 
     clueClusters = clueAlgoBarrel_.getClusters(cluePoints);
-//    cluePoints = clueAlgoBarrel_.getPoints();
     clueAlgoBarrel_.clearLayerTiles(*queue_, 256);
 
   } else {
     info() << "... in the endcap" << endmsg;
 
-    if(not clueAlgoEndcap_.clearAndSetPoints(cluePoints, *queue_, 256))
+    if (not clueAlgoEndcap_.clearAndSetPoints(cluePoints, *queue_, 256))
       throw error() << "Error in setting the clue points for the endcap." << endmsg;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -180,71 +195,66 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(std::vector<
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     //std::cout << "Iteration " << rep;
-    debug() << "ClueGaudiAlgorithmWrapper (endcap): Elapsed time: " << elapsed.count() * 1000 << " ms" << endmsg;
+    debug() << "ClueGaudiAlgorithmWrapper (endcap): Elapsed time: "
+            << elapsed.count() * 1000 << " ms" << endmsg;
 
     clueClusters = clueAlgoEndcap_.getClusters(cluePoints);
-//    cluePoints = clueAlgoEndcap_.getPoints();
     clueAlgoEndcap_.clearLayerTiles(*queue_, 256);
   }
 
   info() << "Finished running CLUE algorithm" << endmsg;
 
   // Including CLUE info in cluePoints
-  for(size_t i = 0; i < cluePoints.size(); i++){
-
-    clue_hits[i].setRho(cluePoints.rho[i]);
-    clue_hits[i].setDelta(cluePoints.delta[i]);
+  for (size_t i = 0; i < cluePoints.size(); i++) {
+    //    clue_hits[i].setRho(cluePoints.rho[i]);
+    //    clue_hits[i].setDelta(cluePoints.delta[i]);
     clue_hits[i].setClusterIndex(cluePoints.clusterIndex[i]);
-/*
+    /*
     debug() << "CLUE Point #" << i <<" : (x,y,z) = ("
            << clue_hits[i].getPosition().x << ","
            << clue_hits[i].getPosition().y << ","
            << clue_hits[i].getPosition().z << ")";
 */
-    if(cluePoints.isSeed[i] == 1){
-//      debug() << " is seed" << endmsg;
+    if (cluePoints.isSeed[i] == 1) {
+      //      debug() << " is seed" << endmsg;
       clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::seed);
     } else if (cluePoints.clusterIndex[i] == -1) {
-//      debug() << " is outlier" << endmsg;
+      //      debug() << " is outlier" << endmsg;
       clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::outlier);
     } else {
-//      debug() << " is follower of cluster #" << cluePoints.clusterIndex[i] << endmsg;
+      //      debug() << " is follower of cluster #" << cluePoints.clusterIndex[i] << endmsg;
       clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::follower);
     }
-
   }
 
   return clueClusters;
 }
 
-void ClueGaudiAlgorithmWrapper::fillFinalClusters(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                                                  const std::map<int, std::vector<int> > clusterMap,
-                                                  edm4hep::ClusterCollection* clusters) const {
-
-  for(auto cl : clusterMap){
-
+void ClueGaudiAlgorithmWrapper::fillFinalClusters(
+    std::vector<clue::CLUECalorimeterHit>& clue_hits,
+    const std::map<int, std::vector<int> > clusterMap,
+    edm4hep::ClusterCollection* clusters) const {
+  std::map<int, std::vector<int> > clustersLayer;
+  for (auto cl : clusterMap) {
     // Outliers should not create a cluster
-    if(cl.first == -1){
+    if (cl.first == -1) {
       continue;
     }
 
-    std::map<int, std::vector<int> > clustersLayer;
-    for(auto index : cl.second){
+    for (auto index : cl.second) {
       clustersLayer[clue_hits[index].getLayer()].push_back(index);
     }
 
-    for(auto clLay : clustersLayer){
-
+    for (auto clLay : clustersLayer) {
       auto cluster = clusters->create();
       unsigned int maxEnergyIndex = 0;
       float maxEnergyValue = 0.f;
 
-      for(auto index : clLay.second){
-
-        if(clue_hits[index].inBarrel()){
+      for (auto index : clLay.second) {
+        if (clue_hits[index].inBarrel()) {
           cluster.addToHits(EB_calo_coll->at(index));
         }
-        if(clue_hits[index].inEndcap()){
+        if (clue_hits[index].inEndcap()) {
           cluster.addToHits(EE_calo_coll->at(index));
         }
 
@@ -255,10 +265,12 @@ void ClueGaudiAlgorithmWrapper::fillFinalClusters(std::vector<clue::CLUECalorime
       }
       float energy = 0.f;
       float sumEnergyErrSquared = 0.f;
-      std::for_each(cluster.getHits().begin(), cluster.getHits().end(),
-                    [&energy, &sumEnergyErrSquared] (edm4hep::CalorimeterHit elem) {
+      std::for_each(cluster.getHits().begin(),
+                    cluster.getHits().end(),
+                    [&energy, &sumEnergyErrSquared](edm4hep::CalorimeterHit elem) {
                       energy += elem.getEnergy();
-                      sumEnergyErrSquared += pow(elem.getEnergyError()/(1.*elem.getEnergy()), 2);
+                      sumEnergyErrSquared +=
+                          pow(elem.getEnergyError() / (1. * elem.getEnergy()), 2);
                     });
       cluster.setEnergy(energy);
       cluster.setEnergyError(sqrt(sumEnergyErrSquared));
@@ -276,16 +288,16 @@ void ClueGaudiAlgorithmWrapper::fillFinalClusters(std::vector<clue::CLUECalorime
 }
 
 void ClueGaudiAlgorithmWrapper::calculatePosition(edm4hep::MutableCluster* cluster) const {
-
   float total_weight = cluster->getEnergy();
-  if(total_weight <= 0)
+  if (total_weight <= 0)
     warning() << "Zero energy in the cluster" << endmsg;
 
   float total_weight_log = 0.f;
   float x_log = 0.f;
   float y_log = 0.f;
   float z_log = 0.f;
-  double thresholdW0_ = 2.9; //Min percentage of energy to contribute to the log-reweight position
+  double thresholdW0_ =
+      2.9;  //Min percentage of energy to contribute to the log-reweight position
 
   for (size_t i = 0; i < cluster->hits_size(); i++) {
     float rhEnergy = cluster->getHits(i).getEnergy();
@@ -298,20 +310,22 @@ void ClueGaudiAlgorithmWrapper::calculatePosition(edm4hep::MutableCluster* clust
 
   if (total_weight_log != 0.) {
     float inv_tot_weight_log = 1.f / total_weight_log;
-    cluster->setPosition({x_log * inv_tot_weight_log, y_log * inv_tot_weight_log, z_log * inv_tot_weight_log});
+    cluster->setPosition({x_log * inv_tot_weight_log,
+                          y_log * inv_tot_weight_log,
+                          z_log * inv_tot_weight_log});
   }
 
   return;
 }
 
-void ClueGaudiAlgorithmWrapper::transformClustersInCaloHits(edm4hep::ClusterCollection* clusters,
-                                                            edm4hep::CalorimeterHitCollection* caloHits) const{
-
+void ClueGaudiAlgorithmWrapper::transformClustersInCaloHits(
+    edm4hep::ClusterCollection* clusters,
+    edm4hep::CalorimeterHitCollection* caloHits) const {
   float time = 0.f;
   float maxEnergy = 0.f;
   std::uint64_t maxEnergyCellID = 0;
 
-  for(auto cl : *clusters){
+  for (auto cl : *clusters) {
     auto caloHit = caloHits->create();
     caloHit.setEnergy(cl.getEnergy());
     caloHit.setEnergyError(cl.getEnergyError());
@@ -321,7 +335,7 @@ void ClueGaudiAlgorithmWrapper::transformClustersInCaloHits(edm4hep::ClusterColl
     time = 0.0;
     maxEnergy = 0.0;
     maxEnergyCellID = 0;
-    for(auto hit : cl.getHits()){
+    for (auto hit : cl.getHits()) {
       time += hit.getTime();
       if (hit.getEnergy() > maxEnergy) {
         maxEnergy = hit.getEnergy();
@@ -329,14 +343,13 @@ void ClueGaudiAlgorithmWrapper::transformClustersInCaloHits(edm4hep::ClusterColl
       }
     }
     caloHit.setCellID(maxEnergyCellID);
-    caloHit.setTime(time/cl.hits_size());
+    caloHit.setTime(time / cl.hits_size());
   }
 
   return;
 }
 
 StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
-
   // Read EB and EE collection
   EB_calo_coll = EB_calo_handle.get();
   EE_calo_coll = EE_calo_handle.get();
@@ -353,15 +366,20 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
   clue::CLUECalorimeterHitCollection clue_hit_coll_barrel;
   clue::CLUECalorimeterHitCollection clue_hit_coll_endcap;
 
-  debug() << "ClueGaudiAlgorithmWrapper: Number of calo hits: " << int(EB_calo_coll->size()+EE_calo_coll->size()) << std::endl;
-  info() << EB_calo_coll->size() << " caloHits in ECAL Barrel." << endmsg;
+  debug() << "ClueGaudiAlgorithmWrapper: Total number of calo hits: "
+          << int(EB_calo_coll->size() + EE_calo_coll->size()) << std::endl;
+  info() << "Processing " << EB_calo_coll->size() << " caloHits in ECAL Barrel."
+         << endmsg;
 
   // Fill CLUECaloHits in the barrel
-  if( EB_calo_coll->isValid() ) {
-    for(const auto& calo_hit : (*EB_calo_coll) ){
+  if (EB_calo_coll->isValid()) {
+    for (const auto& calo_hit : (*EB_calo_coll)) {
       // Cut on a specific layer for noise studies
       //if(bf.get( calo_hit.getCellID(), "layer") == 6){
-        clue_hit_coll_barrel.vect.push_back(clue::CLUECalorimeterHit(calo_hit.clone(), clue::CLUECalorimeterHit::DetectorRegion::barrel, bf.get( calo_hit.getCellID(), "layer")));
+      clue_hit_coll_barrel.vect.push_back(
+          clue::CLUECalorimeterHit(calo_hit.clone(),
+                                   clue::CLUECalorimeterHit::DetectorRegion::barrel,
+                                   bf.get(calo_hit.getCellID(), "layer")));
       //}
     }
   } else {
@@ -369,31 +387,42 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
   }
 
   // Run CLUE in the barrel
-  if(!clue_hit_coll_barrel.vect.empty()){
+  if (!clue_hit_coll_barrel.vect.empty()) {
+    std::map<int, std::vector<int> > clueClustersBarrel =
+        runAlgo(clue_hit_coll_barrel.vect, true);
+    debug() << "Produced " << clueClustersBarrel.size() << " clusters in ECAL Barrel"
+            << endmsg;
 
-    std::map<int, std::vector<int> > clueClustersBarrel = runAlgo(clue_hit_coll_barrel.vect, true);
-    debug() << "Produced " << clueClustersBarrel.size() << " clusters in ECAL Barrel" << endmsg;
-
-    clue_hit_coll.vect.insert(clue_hit_coll.vect.end(), clue_hit_coll_barrel.vect.begin(), clue_hit_coll_barrel.vect.end());
+    clue_hit_coll.vect.insert(clue_hit_coll.vect.end(),
+                              clue_hit_coll_barrel.vect.begin(),
+                              clue_hit_coll_barrel.vect.end());
 
     fillFinalClusters(clue_hit_coll_barrel.vect, clueClustersBarrel, finalClusters.get());
-    info() << "Saved " << finalClusters->size() << " clusters using ECAL Barrel hits" << endmsg;
-
+    info() << "Saved " << finalClusters->size() << " clusters using ECAL Barrel hits"
+           << endmsg;
   }
 
   // Total amount of EE+ and EE- layers (80)
   // already described in `include/CLDEndcapLayerTilesConstants.h`
   int maxLayerPerSide = 40;
 
-  info() << EE_calo_coll->size() << " caloHits in ECAL Endcap." << endmsg;
+  info() << "Processing " << EE_calo_coll->size() << " caloHits in ECAL Endcap."
+         << endmsg;
 
   // Fill CLUECaloHits in the endcap
-  if( EE_calo_coll->isValid() ) {
-    for(const auto& calo_hit : (*EE_calo_coll) ){
-      if(bf.get( calo_hit.getCellID(), "side") < 0 || bf.get( calo_hit.getCellID(), "side") > 1){
-        clue_hit_coll_endcap.vect.push_back(clue::CLUECalorimeterHit(calo_hit.clone(), clue::CLUECalorimeterHit::DetectorRegion::endcap, bf.get( calo_hit.getCellID(), "layer")));
+  if (EE_calo_coll->isValid()) {
+    for (const auto& calo_hit : (*EE_calo_coll)) {
+      if (bf.get(calo_hit.getCellID(), "side") < 0 ||
+          bf.get(calo_hit.getCellID(), "side") > 1) {
+        clue_hit_coll_endcap.vect.push_back(
+            clue::CLUECalorimeterHit(calo_hit.clone(),
+                                     clue::CLUECalorimeterHit::DetectorRegion::endcap,
+                                     bf.get(calo_hit.getCellID(), "layer")));
       } else {
-        clue_hit_coll_endcap.vect.push_back(clue::CLUECalorimeterHit(calo_hit.clone(), clue::CLUECalorimeterHit::DetectorRegion::endcap, bf.get( calo_hit.getCellID(), "layer") + maxLayerPerSide));
+        clue_hit_coll_endcap.vect.push_back(clue::CLUECalorimeterHit(
+            calo_hit.clone(),
+            clue::CLUECalorimeterHit::DetectorRegion::endcap,
+            bf.get(calo_hit.getCellID(), "layer") + maxLayerPerSide));
       }
     }
   } else {
@@ -401,27 +430,33 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
   }
 
   // Run CLUE in the endcap
-  if(!clue_hit_coll_endcap.vect.empty()){
-    std::map<int, std::vector<int> > clueClustersEndcap = runAlgo(clue_hit_coll_endcap.vect, false);
-    debug() << "Produced " << clueClustersEndcap.size() << " clusters in ECAL Endcap" << endmsg;
+  if (!clue_hit_coll_endcap.vect.empty()) {
+    std::map<int, std::vector<int> > clueClustersEndcap =
+        runAlgo(clue_hit_coll_endcap.vect, false);
+    debug() << "Produced " << clueClustersEndcap.size() << " clusters in ECAL Endcap"
+            << endmsg;
 
-    clue_hit_coll.vect.insert(clue_hit_coll.vect.end(), clue_hit_coll_endcap.vect.begin(), clue_hit_coll_endcap.vect.end());
+    clue_hit_coll.vect.insert(clue_hit_coll.vect.end(),
+                              clue_hit_coll_endcap.vect.begin(),
+                              clue_hit_coll_endcap.vect.end());
 
     fillFinalClusters(clue_hit_coll_endcap.vect, clueClustersEndcap, finalClusters.get());
-    info() << "Saved " << finalClusters->size() << " clusters using ECAL Endcap hits" << endmsg;
-
+    info() << "Saved " << finalClusters->size() << " clusters using ECAL Endcap hits"
+           << endmsg;
   }
 
   info() << "Saved " << finalClusters->size() << " CLUE clusters in total." << endmsg;
 
   // Save CLUE calo hits
   auto pCHV = std::make_unique<clue::CLUECalorimeterHitCollection>(clue_hit_coll);
-  const StatusCode scStatusV = eventSvc()->registerObject("/Event/CLUECalorimeterHitCollection", pCHV.release());
+  const StatusCode scStatusV =
+      eventSvc()->registerObject("/Event/CLUECalorimeterHitCollection", pCHV.release());
   if (scStatusV.isFailure()) {
     error() << "Failed to register CLUECalorimeterHitCollection" << endmsg;
     return StatusCode::FAILURE;
   }
-  info() << "Saved " << clue_hit_coll.vect.size() << " CLUE calo hits in total. " << endmsg;
+  info() << "Saved " << clue_hit_coll.vect.size() << " CLUE calo hits in total. "
+         << endmsg;
 
   // Save clusters as calo hits and add cellID to them
   auto finalCaloHits = std::make_unique<edm4hep::CalorimeterHitCollection>();
@@ -442,6 +477,4 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
   return StatusCode::SUCCESS;
 }
 
-StatusCode ClueGaudiAlgorithmWrapper::finalize() {
-  return Algorithm::finalize();
-}
+StatusCode ClueGaudiAlgorithmWrapper::finalize() { return Algorithm::finalize(); }

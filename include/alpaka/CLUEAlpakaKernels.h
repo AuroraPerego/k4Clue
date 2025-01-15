@@ -58,21 +58,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const VecArray<float, nDim>& coords_i, float* rho_i, float dc,
       uint32_t point_id) {
     if constexpr (N_ == 0) {
-      int binId{tiles->getGlobalBinByBin(base_vec)};
+      int binId = tiles->getGlobalBinByBin(base_vec);
       // get the size of this bin
-      int binSize{static_cast<int>((*tiles)[binId].size())};
+      int binSize = static_cast<int>((*tiles)[binId].size());
 
       // iterate inside this bin
       for (int binIter = 0; binIter < binSize; ++binIter) {
         uint32_t j = (*tiles)[binId][binIter];
         // query N_{dc_}(i)
 
-        VecArray<float, nDim> coords_j{dev_points->coords[j]};
+        const auto& coords_j = dev_points->coords[j];
+        const auto& coord_r = dev_points->addCoord[j];
 
         float dist_ij_sq = 0.f;
         for (int dim = 0; dim != nDim; ++dim) {
-          dist_ij_sq +=
-              (coords_j[dim] - coords_i[dim]) * (coords_j[dim] - coords_i[dim]);
+          if (TConstants::wrapped[dim])
+            dist_ij_sq += (coord_r * reco::normalizedPhi(coords_i[dim] - coords_j[dim])) * (coord_r * reco::normalizedPhi(coords_i[dim] - coords_j[dim]));
+          else
+            dist_ij_sq += (coords_j[dim] - coords_i[dim]) * (coords_j[dim] - coords_i[dim]);
         }
 
         if (dist_ij_sq <= dc * dc) {
