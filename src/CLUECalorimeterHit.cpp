@@ -31,7 +31,7 @@ namespace clue {
       const CalorimeterHit& ch,
       const CLUECalorimeterHit::DetectorRegion detRegion,
       const int layer)
-      : CalorimeterHit(ch), m_detectorRegion(detRegion), m_layer(layer) {
+      : CalorimeterHit(ch), m_layer(layer), m_detectorRegion(detRegion) {
     setR();
     setEta();
     setPhi();
@@ -46,18 +46,18 @@ namespace clue {
       const float rho,
       const float delta)
       : CalorimeterHit(ch),
-        m_detectorRegion(detRegion),
-        m_layer(layer),
-        m_status(status),
         m_rho(rho),
         m_delta(delta),
-        m_clusterIndex(clusterIndex) {
+        m_layer(layer),
+        m_clusterIndex(clusterIndex),
+        m_detectorRegion(detRegion),
+        m_status(status) {
     setR();
     setEta();
     setPhi();
   }
 
-  const std::uint64_t& CLUECalorimeterHit::getLayer() const { return m_layer; }
+  uint32_t CLUECalorimeterHit::getLayer() const { return m_layer; }
   bool CLUECalorimeterHit::inBarrel() const {
     return (m_detectorRegion == barrel ? true : false);
   }
@@ -71,11 +71,12 @@ namespace clue {
   bool CLUECalorimeterHit::isOutlier() const {
     return (m_status == outlier ? true : false);
   }
-  const float& CLUECalorimeterHit::getRho() const { return m_rho; }
-  const float& CLUECalorimeterHit::getDelta() const { return m_delta; }
-  const float& CLUECalorimeterHit::getR() const { return m_r; }
-  const float& CLUECalorimeterHit::getEta() const { return m_eta; }
-  const float& CLUECalorimeterHit::getPhi() const { return m_phi; }
+  float CLUECalorimeterHit::getRho() const { return m_rho; }
+  float CLUECalorimeterHit::getDelta() const { return m_delta; }
+  float CLUECalorimeterHit::getR() const { return m_r; }
+  float CLUECalorimeterHit::getEta() const { return m_eta; }
+  float CLUECalorimeterHit::getPhi() const { return m_phi; }
+  int32_t CLUECalorimeterHit::getClusterIndex() const { return m_clusterIndex; };
 
   void CLUECalorimeterHit::setEta() {
     m_eta = -1. * log(tan(atan2(m_r, getPosition().z) / 2.));
@@ -89,3 +90,21 @@ namespace clue {
   }
 
 }  // namespace clue
+
+std::ostream& operator<<(std::ostream& o, const clue::CLUECalorimeterHit& value) {
+  o << "Energy: " << value.getEnergy() << "\n"
+    << "Time: " << value.getTime() << "\n"
+    << "Position: (" << value.getPosition().x << ", " << value.getPosition().y << ", "
+    << value.getPosition().z << ")\n"
+    << "Layer: " << value.getLayer() << "\n"
+    << "Region: " << (value.inBarrel() ? "Barrel" : "Endcap") << "\n"
+    << "Status: "
+    << (value.isSeed()       ? "Seed"
+        : value.isFollower() ? "Follower"
+                             : "Outlier")
+    << "\n"
+    << "Rho: " << value.getRho() << "\n"
+    << "Delta: " << value.getDelta() << "\n"
+    << "Cluster Index: " << value.getClusterIndex() << "\n";
+  return o;
+}
