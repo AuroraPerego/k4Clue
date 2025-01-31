@@ -85,10 +85,13 @@ namespace clue {
     void setEta();
     void setPhi();
 
+    /// Access cluster index
+    int32_t getClusterIndex() const;
+
     void setRho(float rho) { m_rho = rho; }
     void setDelta(float delta) { m_delta = delta; }
     void setStatus(Status status) { m_status = status; }
-    void setClusterIndex(uint32_t clIdx) { m_clusterIndex = clIdx; }
+    void setClusterIndex(int32_t clIdx) { m_clusterIndex = clIdx; }
 
   private:
     float m_rho;
@@ -97,6 +100,7 @@ namespace clue {
     float m_eta;
     float m_phi;
     uint32_t m_layer;
+    int32_t m_clusterIndex;
     uint8_t m_detectorRegion;
     uint8_t m_status;
   };

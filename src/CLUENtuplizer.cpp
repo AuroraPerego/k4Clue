@@ -162,7 +162,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
         if(foundInECAL) {
           // Found in EB, break the loop
           break;
-        } 
+        }
       }
 
       if(!foundInECAL){
@@ -195,8 +195,8 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       /*
       } else {
         debug() << "  This calo hit was NOT found among ECAL hits (cellID : " << hit.getCellID()
-               << ", layer : " << ch_layer   
-               << ", energy : " << hit.getEnergy() << " )" << endmsg; 
+               << ", layer : " << ch_layer
+               << ", energy : " << hit.getEnergy() << " )" << endmsg;
       }
 */
     }
@@ -255,10 +255,10 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       m_hits_status->push_back(0);
       nOutliers++;
     }
+    m_hits_clusId->push_back(clue_hit.getClusterIndex());
   }
   debug() << "Found: " << nSeeds << " seeds, " << nOutliers << " outliers, " << nFollowers
-          << " followers."
-          << " Total energy clusterized: " << totEnergy << " GeV" << endmsg;
+          << " followers. Total energy clusterized: " << totEnergy << " GeV" << endmsg;
   t_hits->Fill();
   return StatusCode::SUCCESS;
 }
@@ -268,6 +268,7 @@ void CLUENtuplizer::initializeTrees() {
   m_hits_region = new std::vector<int>();
   m_hits_layer = new std::vector<int>();
   m_hits_status = new std::vector<int>();
+  m_hits_clusId = new std::vector<int>();
   m_hits_x = new std::vector<float>();
   m_hits_y = new std::vector<float>();
   m_hits_z = new std::vector<float>();
@@ -282,6 +283,7 @@ void CLUENtuplizer::initializeTrees() {
   t_hits->Branch("region", &m_hits_region);
   t_hits->Branch("layer", &m_hits_layer);
   t_hits->Branch("status", &m_hits_status);
+  t_hits->Branch("clusterId", &m_hits_clusId);
   t_hits->Branch("x", &m_hits_x);
   t_hits->Branch("y", &m_hits_y);
   t_hits->Branch("z", &m_hits_z);
@@ -340,6 +342,7 @@ void CLUENtuplizer::cleanTrees() const {
   m_hits_region->clear();
   m_hits_layer->clear();
   m_hits_status->clear();
+  m_hits_clusId->clear();
   m_hits_x->clear();
   m_hits_y->clear();
   m_hits_z->clear();

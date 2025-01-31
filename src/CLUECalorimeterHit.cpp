@@ -42,12 +42,14 @@ namespace clue {
       const CLUECalorimeterHit::DetectorRegion detRegion,
       const int layer,
       const CLUECalorimeterHit::Status status,
+      const int clusterIndex,
       const float rho,
       const float delta)
       : CalorimeterHit(ch),
         m_rho(rho),
         m_delta(delta),
         m_layer(layer),
+        m_clusterIndex(clusterIndex),
         m_detectorRegion(detRegion),
         m_status(status) {
     setR();
@@ -74,6 +76,7 @@ namespace clue {
   float CLUECalorimeterHit::getR() const { return m_r; }
   float CLUECalorimeterHit::getEta() const { return m_eta; }
   float CLUECalorimeterHit::getPhi() const { return m_phi; }
+  int32_t CLUECalorimeterHit::getClusterIndex() const { return m_clusterIndex; };
 
   void CLUECalorimeterHit::setEta() {
     m_eta = -1. * log(tan(atan2(m_r, getPosition().z) / 2.));

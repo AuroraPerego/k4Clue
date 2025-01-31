@@ -111,6 +111,7 @@ private:
   mutable std::vector<int>* m_hits_region = nullptr;
   mutable std::vector<int>* m_hits_layer = nullptr;
   mutable std::vector<int>* m_hits_status = nullptr;
+  mutable std::vector<int>* m_hits_clusId = nullptr;
   mutable std::vector<float>* m_hits_x = nullptr;
   mutable std::vector<float>* m_hits_y = nullptr;
   mutable std::vector<float>* m_hits_z = nullptr;
