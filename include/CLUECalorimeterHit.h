@@ -48,7 +48,7 @@ namespace clue {
                        const float delta);
 
     /// Access the layer number
-    const std::uint64_t& getLayer() const;
+    uint32_t getLayer() const;
 
     /// Access the region of calorimeter
     bool inBarrel() const;
@@ -66,40 +66,43 @@ namespace clue {
     bool isSeed() const;
 
     /// Access the delta
-    const float& getDelta() const;
+    float getDelta() const;
 
     /// Access the rho
-    const float& getRho() const;
+    float getRho() const;
 
     /// Access the transverse position
-    const float& getR() const;
+    float getR() const;
 
     /// Access the eta
-    const float& getEta() const;
+    float getEta() const;
 
     /// Access the phi
-    const float& getPhi() const;
+    float getPhi() const;
 
     /// Set hit transverse global position, pseudorapidity and phi
     void setR();
     void setEta();
     void setPhi();
 
+    /// Access cluster index
+    int32_t getClusterIndex() const;
+
     void setRho(float rho) { m_rho = rho; }
     void setDelta(float delta) { m_delta = delta; }
     void setStatus(Status status) { m_status = status; }
-    void setClusterIndex(int clIdx) { m_clusterIndex = clIdx; }
+    void setClusterIndex(int32_t clIdx) { m_clusterIndex = clIdx; }
 
   private:
-    std::uint8_t m_detectorRegion{0};
-    std::uint64_t m_layer{};
-    std::uint8_t m_status{0};
-    float m_rho{};
-    float m_delta{};
-    float m_r{};
-    float m_eta{};
-    float m_phi{};
-    std::uint64_t m_clusterIndex{};
+    float m_eta;
+    float m_phi;
+    float m_r;
+    float m_rho;
+    float m_delta;
+    uint8_t m_detectorRegion;
+    uint8_t m_status;
+    uint32_t m_layer;
+    int32_t m_clusterIndex;
   };
 
   class CLUECalorimeterHitCollection : public DataObject {
@@ -108,5 +111,7 @@ namespace clue {
   };
 
 }  // namespace clue
+
+std::ostream& operator<<(std::ostream& o, const clue::CLUECalorimeterHit& value);
 
 #endif
