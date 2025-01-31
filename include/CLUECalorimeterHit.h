@@ -25,81 +25,89 @@
 namespace clue {
 
   class CLUECalorimeterHit : public edm4hep::CalorimeterHit, public DataObject {
-public:
-  using CalorimeterHit::CalorimeterHit;
+  public:
+    using CalorimeterHit::CalorimeterHit;
 
-  enum Status { outlier = 0, follower, seed };
+    enum Status { outlier = 0, follower, seed };
 
-  enum DetectorRegion { barrel = 0, endcap };
+    enum DetectorRegion { barrel = 0, endcap };
 
-  /// constructors
-  CLUECalorimeterHit(const CalorimeterHit& ch);
+    /// constructors
+    CLUECalorimeterHit(const CalorimeterHit& ch);
 
-  CLUECalorimeterHit(const CalorimeterHit& ch, const CLUECalorimeterHit::DetectorRegion detRegion, const int layer);
+    CLUECalorimeterHit(const CalorimeterHit& ch,
+                       const CLUECalorimeterHit::DetectorRegion detRegion,
+                       const int layer);
 
-  CLUECalorimeterHit(const CalorimeterHit& ch, const CLUECalorimeterHit::DetectorRegion detRegion, const int layer, 
-                     const CLUECalorimeterHit::Status status, const int clusterIndex, const float rho, const float delta);
+    CLUECalorimeterHit(const CalorimeterHit& ch,
+                       const CLUECalorimeterHit::DetectorRegion detRegion,
+                       const int layer,
+                       const CLUECalorimeterHit::Status status,
+                       const int clusterIndex,
+                       const float rho,
+                       const float delta);
 
-  /// Access the layer number
-  const std::uint64_t& getLayer() const;
+    /// Access the layer number
+    uint32_t getLayer() const;
 
-  /// Access the region of calorimeter
-  bool inBarrel() const;
+    /// Access the region of calorimeter
+    bool inBarrel() const;
 
-  /// Access the region of calorimeter
-  bool inEndcap() const;
+    /// Access the region of calorimeter
+    bool inEndcap() const;
 
-  /// Status follower value
-  bool isFollower() const;
+    /// Status follower value
+    bool isFollower() const;
 
-  /// Status outlier value
-  bool isOutlier() const;
+    /// Status outlier value
+    bool isOutlier() const;
 
-  /// Status seed value
-  bool isSeed() const;
+    /// Status seed value
+    bool isSeed() const;
 
-  /// Access the delta
-  const float& getDelta() const;
+    /// Access the delta
+    float getDelta() const;
 
-  /// Access the rho
-  const float& getRho() const;
+    /// Access the rho
+    float getRho() const;
 
-  /// Access the transverse position
-  const float& getR() const;
+    /// Access the transverse position
+    float getR() const;
 
-  /// Access the eta
-  const float& getEta() const;
+    /// Access the eta
+    float getEta() const;
 
-  /// Access the phi
-  const float& getPhi() const;
+    /// Access the phi
+    float getPhi() const;
 
-  /// Set hit transverse global position, pseudorapidity and phi
-  void setR();
-  void setEta();
-  void setPhi();
+    /// Set hit transverse global position, pseudorapidity and phi
+    void setR();
+    void setEta();
+    void setPhi();
 
-  void setRho( float rho ) { m_rho = rho; }
-  void setDelta( float delta ) { m_delta = delta; }
-  void setStatus( Status status ) { m_status = status; }
-  void setClusterIndex( int clIdx ) { m_clusterIndex = clIdx; }
+    void setRho(float rho) { m_rho = rho; }
+    void setDelta(float delta) { m_delta = delta; }
+    void setStatus(Status status) { m_status = status; }
+    void setClusterIndex(uint32_t clIdx) { m_clusterIndex = clIdx; }
 
-private:
-  std::uint8_t m_detectorRegion{0};
-  std::uint64_t m_layer{};
-  std::uint8_t m_status{0};
-  float m_rho{};
-  float m_delta{};
-  float m_r{};
-  float m_eta{};
-  float m_phi{};
-  std::uint64_t m_clusterIndex{};
-};
+  private:
+    float m_rho;
+    float m_delta;
+    float m_r;
+    float m_eta;
+    float m_phi;
+    uint32_t m_layer;
+    uint8_t m_detectorRegion;
+    uint8_t m_status;
+  };
 
-class CLUECalorimeterHitCollection : public DataObject {
-public:
-  std::vector<CLUECalorimeterHit> vect;
-};
+  class CLUECalorimeterHitCollection : public DataObject {
+  public:
+    std::vector<CLUECalorimeterHit> vect;
+  };
 
-} // namespace clue
+}  // namespace clue
+
+std::ostream& operator<<(std::ostream& o, const clue::CLUECalorimeterHit& value);
 
 #endif
