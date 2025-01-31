@@ -21,7 +21,8 @@ from Gaudi.Configuration import WARNING, DEBUG
 from Configurables import k4DataSvc, MarlinProcessorWrapper
 
 from Configurables import PodioInput
-from Configurables import ClueGaudiAlgorithmWrapper
+from Configurables import ClueGaudiAlgorithmWrapper__unsignedschar_3_ as ClueGaudiAlgorithmWrapper3
+from Configurables import ClueGaudiAlgorithmWrapper__unsignedschar_2_ as ClueGaudiAlgorithmWrapper2
 from Configurables import CLUENtuplizer
 from Configurables import THistSvc
 from Configurables import PodioOutput
@@ -50,9 +51,7 @@ MyAIDAProcessor.Parameters = {"FileName": ["histograms_clue_standalone"],
                     "Compress": ["1"],
                     }
 
-
-
-MyClueGaudiAlgorithmWrapper = ClueGaudiAlgorithmWrapper("ClueGaudiAlgorithmWrapperName")
+MyClueGaudiAlgorithmWrapper = ClueGaudiAlgorithmWrapper3("ClueGaudiAlgorithmWrapperName")
 MyClueGaudiAlgorithmWrapper.BarrelCaloHitsCollection = "ECALBarrel"
 MyClueGaudiAlgorithmWrapper.EndcapCaloHitsCollection = "ECALEndcap"
 MyClueGaudiAlgorithmWrapper.CriticalDistance = 15.00

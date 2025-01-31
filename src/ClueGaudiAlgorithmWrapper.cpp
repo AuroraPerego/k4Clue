@@ -27,10 +27,14 @@ using namespace dd4hep;
 using namespace DDSegmentation;
 using namespace std;
 
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper)
+using ClueGaudiAlgorithmWrapper3 = ClueGaudiAlgorithmWrapper<3>;
+DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper3)
+using ClueGaudiAlgorithmWrapper2 = ClueGaudiAlgorithmWrapper<2>;
+DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper2)
 
-ClueGaudiAlgorithmWrapper::ClueGaudiAlgorithmWrapper(const std::string& name,
-                                                     ISvcLocator* pSL)
+template <uint8_t nDim>
+ClueGaudiAlgorithmWrapper<nDim>::ClueGaudiAlgorithmWrapper(const std::string& name,
+                                                           ISvcLocator* pSL)
     : Gaudi::Algorithm(name, pSL) {
   declareProperty("BarrelCaloHitsCollection",
                   EB_calo_handle,
@@ -51,7 +55,8 @@ ClueGaudiAlgorithmWrapper::ClueGaudiAlgorithmWrapper(const std::string& name,
                   "Calo hits collection created from Clusters (output)");
 }
 
-StatusCode ClueGaudiAlgorithmWrapper::initialize() {
+template <uint8_t nDim>
+StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
   bool clue_verbose = false;
   if (msgLevel(MSG::INFO) || msgLevel(MSG::DEBUG)) {
     clue_verbose = true;
@@ -66,17 +71,18 @@ StatusCode ClueGaudiAlgorithmWrapper::initialize() {
   queue_ = std::make_optional<Queue>(devAcc);
 
   auto start = std::chrono::high_resolution_clock::now();
-  clueAlgo_ = std::make_optional<ALPAKA_ACCELERATOR_NAMESPACE_CLUE::CLUEAlgoAlpaka<2>>(
-      dc, rhoc, dc*outlierDeltaFactor, 10, *queue_);
+  clueAlgo_ = std::make_optional<ALPAKA_ACCELERATOR_NAMESPACE_CLUE::CLUEAlgoAlpaka<nDim>>(
+      dc, rhoc, dc * outlierDeltaFactor, 10, *queue_);
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
-  info() << "ClueGaudiAlgorithmWrapper: Set up time: " << elapsed.count() * 1000
-         << " ms" << endmsg;
+  info() << "ClueGaudiAlgorithmWrapper: Set up time: " << elapsed.count() * 1000 << " ms"
+         << endmsg;
 
   return Algorithm::initialize();
 }
 
-void ClueGaudiAlgorithmWrapper::exclude_stats_outliers(std::vector<float>& v) {
+template <uint8_t nDim>
+void ClueGaudiAlgorithmWrapper<nDim>::exclude_stats_outliers(std::vector<float>& v) {
   if (v.size() == 1)
     return;
   float mean = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
@@ -96,7 +102,9 @@ void ClueGaudiAlgorithmWrapper::exclude_stats_outliers(std::vector<float>& v) {
           v.end());
 }
 
-std::pair<float, float> ClueGaudiAlgorithmWrapper::stats(const std::vector<float>& v) {
+template <uint8_t nDim>
+std::pair<float, float> ClueGaudiAlgorithmWrapper<nDim>::stats(
+    const std::vector<float>& v) {
   float m = std::accumulate(v.begin(), v.end(), 0.0) / v.size();
   float sum = std::accumulate(v.begin(), v.end(), 0.0, [m](float acc, float val) {
     return acc + (val - m) * (val - m);
@@ -105,9 +113,10 @@ std::pair<float, float> ClueGaudiAlgorithmWrapper::stats(const std::vector<float
   return {m, std::sqrt(sum / den)};
 }
 
-void ClueGaudiAlgorithmWrapper::printTimingReport(std::vector<float>& vals,
-                                                  int repeats,
-                                                  const std::string label) {
+template <uint8_t nDim>
+void ClueGaudiAlgorithmWrapper<nDim>::printTimingReport(std::vector<float>& vals,
+                                                        int repeats,
+                                                        const std::string label) {
   int precision = 2;
   float mean = 0.f;
   float sigma = 0.f;
@@ -123,53 +132,67 @@ void ClueGaudiAlgorithmWrapper::printTimingReport(std::vector<float>& vals,
             << " [ms]" << std::endl;
 }
 
-PointsSoA<2> ClueGaudiAlgorithmWrapper::fillCLUEPoints(const std::vector<clue::CLUECalorimeterHit>& clue_hits, const bool isBarrel) const {
-    // Determine the number of points
-    size_t nPoints = clue_hits.size();
+template <uint8_t nDim>
+PointsSoA<nDim> ClueGaudiAlgorithmWrapper<nDim>::fillCLUEPoints(
+    const std::vector<clue::CLUECalorimeterHit>& clue_hits,
+    float* floatBuffer,
+    int* intBuffer,
+    const bool isBarrel) const {
+  size_t nPoints = clue_hits.size();
 
-    // Dynamically allocate buffers to ensure they persist beyond this function
-    auto* floatBuffer = new float[nPoints * 2]; // 2 dimensions: x and y
-    auto* intBuffer = new int[nPoints * 2];     // Placeholder for clusterIndexes and isSeed
-
-    // Fill floatBuffer: first all x, then all y
-    for (size_t i = 0; i < nPoints; ++i) {
-      if (isBarrel) {
-        floatBuffer[i] = clue_hits[i].getPhi();                    // Fill phi coordinates
-        floatBuffer[nPoints + i] = clue_hits[i].getPosition().z;   // Fill z coordinates
-      } else {
-        floatBuffer[i] = clue_hits[i].getPosition().x;             // Fill x coordinates
-        floatBuffer[nPoints + i] = clue_hits[i].getPosition().y;   // Fill y coordinates
-      }
+  for (size_t i = 0; i < nPoints; ++i) {
+    if (isBarrel) {
+      floatBuffer[i] = clue_hits[i].getPhi();                   // Fill phi coordinates
+      floatBuffer[nPoints + i] = clue_hits[i].getPosition().z;  // Fill z coordinates
+      if constexpr (nDim == 3)
+        floatBuffer[nPoints * 2 + i] = clue_hits[i].getEta();      // Fill eta coordinates
+      floatBuffer[nPoints * nDim + i] = clue_hits[i].getEnergy();  // Fill weights
+    } else {
+      floatBuffer[i] = clue_hits[i].getPosition().x;            // Fill x coordinates
+      floatBuffer[nPoints + i] = clue_hits[i].getPosition().y;  // Fill y coordinates
+      if constexpr (nDim == 3)
+        floatBuffer[nPoints * 2 + i] =
+            clue_hits[i].getPosition().z;                          // Fill z coordinates
+      floatBuffer[nPoints * nDim + i] = clue_hits[i].getEnergy();  // Fill weights
     }
+  }
 
-    // Define the info for PointsSoA
-    PointInfo<2> info;
-    info.nPoints = nPoints;
-    info.wrapping[0] = isBarrel ? 1 : 0;
-    info.wrapping[1] = 0;
+  // Define the info for PointsSoA
+  PointInfo<nDim> info;
+  info.nPoints = nPoints;
+  info.wrapping[0] = isBarrel ? 1 : 0;
+  info.wrapping[1] = 0;
+  if constexpr (nDim == 3)
+    info.wrapping[2] = 0;
 
-    // Construct and return the PointsSoA object
-    return PointsSoA<2>(floatBuffer, intBuffer, info);
+  // Construct and return the PointsSoA object
+  return PointsSoA<nDim>(floatBuffer, intBuffer, info);
 }
 
-std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(
+template <uint8_t nDim>
+std::map<int, std::vector<int>> ClueGaudiAlgorithmWrapper<nDim>::runAlgo(
     std::vector<clue::CLUECalorimeterHit>& clue_hits, const bool isBarrel) const {
-  std::map<int, std::vector<int> > clueClusters;
+  std::map<int, std::vector<int>> clueClusters;
 
   // Fill CLUE inputs
-  auto cluePoints = fillCLUEPoints(clue_hits, isBarrel);
+  size_t nPoints = clue_hits.size();
+  std::vector<float> floatBuffer(nPoints * (nDim + 1));
+  std::vector<int> intBuffer(nPoints * 2);
+  auto cluePoints =
+      fillCLUEPoints(clue_hits, floatBuffer.data(), intBuffer.data(), isBarrel);
 
   // Run CLUE
-  info() << "Running CLUEAlgo on device " << alpaka::getName(alpaka::getDev(*queue_)) << endmsg;
+  info() << "Running CLUEAlgo on device " << alpaka::getName(alpaka::getDev(*queue_))
+         << endmsg;
 
   // measure excution time of make_clusters
-  auto start = std::chrono::high_resolution_clock::now();
   FlatKernel kernel(0.5f);
+  auto start = std::chrono::high_resolution_clock::now();
   clueAlgo_->make_clusters(cluePoints, kernel, *queue_, 256);
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
-  debug() << "ClueGaudiAlgorithmWrapper: Elapsed time: "
-          << elapsed.count() * 1000 << " ms" << endmsg;
+  debug() << "ClueGaudiAlgorithmWrapper: Elapsed time: " << elapsed.count() * 1000
+          << " ms" << endmsg;
 
   clueClusters = clueAlgo_->getClusters(cluePoints);
 
@@ -201,11 +224,12 @@ std::map<int, std::vector<int> > ClueGaudiAlgorithmWrapper::runAlgo(
   return clueClusters;
 }
 
-void ClueGaudiAlgorithmWrapper::fillFinalClusters(
+template <uint8_t nDim>
+void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClusters(
     std::vector<clue::CLUECalorimeterHit>& clue_hits,
-    const std::map<int, std::vector<int> > clusterMap,
+    const std::map<int, std::vector<int>> clusterMap,
     edm4hep::ClusterCollection* clusters) const {
-  std::map<int, std::vector<int> > clustersLayer;
+  std::map<int, std::vector<int>> clustersLayer;
   for (auto cl : clusterMap) {
     // Outliers should not create a cluster
     if (cl.first == -1) {
@@ -258,7 +282,9 @@ void ClueGaudiAlgorithmWrapper::fillFinalClusters(
   return;
 }
 
-void ClueGaudiAlgorithmWrapper::calculatePosition(edm4hep::MutableCluster* cluster) const {
+template <uint8_t nDim>
+void ClueGaudiAlgorithmWrapper<nDim>::calculatePosition(
+    edm4hep::MutableCluster* cluster) const {
   float total_weight = cluster->getEnergy();
   if (total_weight <= 0)
     warning() << "Zero energy in the cluster" << endmsg;
@@ -289,7 +315,8 @@ void ClueGaudiAlgorithmWrapper::calculatePosition(edm4hep::MutableCluster* clust
   return;
 }
 
-void ClueGaudiAlgorithmWrapper::transformClustersInCaloHits(
+template <uint8_t nDim>
+void ClueGaudiAlgorithmWrapper<nDim>::transformClustersInCaloHits(
     edm4hep::ClusterCollection* clusters,
     edm4hep::CalorimeterHitCollection* caloHits) const {
   float time = 0.f;
@@ -320,7 +347,8 @@ void ClueGaudiAlgorithmWrapper::transformClustersInCaloHits(
   return;
 }
 
-StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
+template <uint8_t nDim>
+StatusCode ClueGaudiAlgorithmWrapper<nDim>::execute(const EventContext&) const {
   // Read EB and EE collection
   EB_calo_coll = EB_calo_handle.get();
   EE_calo_coll = EE_calo_handle.get();
@@ -338,7 +366,7 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
   clue::CLUECalorimeterHitCollection clue_hit_coll_endcap;
 
   debug() << "ClueGaudiAlgorithmWrapper: Total number of calo hits: "
-          << int(EB_calo_coll->size() + EE_calo_coll->size()) << std::endl;
+          << int(EB_calo_coll->size() + EE_calo_coll->size()) << endmsg;
   info() << "Processing " << EB_calo_coll->size() << " caloHits in ECAL Barrel."
          << endmsg;
 
@@ -359,7 +387,7 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
 
   // Run CLUE in the barrel
   if (!clue_hit_coll_barrel.vect.empty()) {
-    std::map<int, std::vector<int> > clueClustersBarrel =
+    std::map<int, std::vector<int>> clueClustersBarrel =
         runAlgo(clue_hit_coll_barrel.vect, true);
     debug() << "Produced " << clueClustersBarrel.size() << " clusters in ECAL Barrel"
             << endmsg;
@@ -402,7 +430,7 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
 
   // Run CLUE in the endcap
   if (!clue_hit_coll_endcap.vect.empty()) {
-    std::map<int, std::vector<int> > clueClustersEndcap =
+    std::map<int, std::vector<int>> clueClustersEndcap =
         runAlgo(clue_hit_coll_endcap.vect, false);
     debug() << "Produced " << clueClustersEndcap.size() << " clusters in ECAL Endcap"
             << endmsg;
@@ -448,4 +476,7 @@ StatusCode ClueGaudiAlgorithmWrapper::execute(const EventContext&) const {
   return StatusCode::SUCCESS;
 }
 
-StatusCode ClueGaudiAlgorithmWrapper::finalize() { return Algorithm::finalize(); }
+template <uint8_t nDim>
+StatusCode ClueGaudiAlgorithmWrapper<nDim>::finalize() {
+  return Algorithm::finalize();
+}
