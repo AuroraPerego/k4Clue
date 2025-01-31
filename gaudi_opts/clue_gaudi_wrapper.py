@@ -53,14 +53,15 @@ MyAIDAProcessor.Parameters = {"FileName": ["histograms_clue_standalone"],
                     "Compress": ["1"],
                     }
 
-
-
+rho = 0.1 # MinLocalDensity
+dc = 25 # CriticalDistance
+do = 4 # OutlierDeltaFactor
 MyClueGaudiAlgorithmWrapper = ClueGaudiAlgorithmWrapper("ClueGaudiAlgorithmWrapperName")
 MyClueGaudiAlgorithmWrapper.BarrelCaloHitsCollection = "ECALBarrel"
 MyClueGaudiAlgorithmWrapper.EndcapCaloHitsCollection = "ECALEndcap"
-MyClueGaudiAlgorithmWrapper.CriticalDistance = 15.00
-MyClueGaudiAlgorithmWrapper.MinLocalDensity = 0.02
-MyClueGaudiAlgorithmWrapper.OutlierDeltaFactor = 3.00
+MyClueGaudiAlgorithmWrapper.CriticalDistance = dc
+MyClueGaudiAlgorithmWrapper.MinLocalDensity = rho
+MyClueGaudiAlgorithmWrapper.OutlierDeltaFactor = do
 MyClueGaudiAlgorithmWrapper.OutputLevel = DEBUG
 
 MyCLUENtuplizer = CLUENtuplizer("CLUEAnalysis")
@@ -70,7 +71,9 @@ MyCLUENtuplizer.EndcapCaloHitsCollection = "ECALEndcap"
 MyCLUENtuplizer.SingleMCParticle = True
 MyCLUENtuplizer.OutputLevel = WARNING
 
-THistSvc().Output = ["rec DATAFILE='k4clue_analysis_output.root' TYP='ROOT' OPT='RECREATE'"]
+str_params = str(rho).replace(".","p") + "_" + str(dc).replace(".","p") + "_" + str(do).replace(".","p")
+filename = "rec DATAFILE='k4clue_analysis_output_3D_"+str_params+".root' TYP='ROOT' OPT='RECREATE'"
+THistSvc().Output = [filename]
 THistSvc().OutputLevel = WARNING
 THistSvc().PrintAll = False
 THistSvc().AutoSave = True
