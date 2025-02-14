@@ -27,10 +27,22 @@ using namespace dd4hep;
 using namespace DDSegmentation;
 using namespace std;
 
+#if defined(ALPAKA_ACC_GPU_CUDA_ENABLED)
+using ClueGaudiAlgorithmWrapperCUDA3 = ClueGaudiAlgorithmWrapper<3>;
+DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperCUDA3)
+using ClueGaudiAlgorithmWrapperCUDA2 = ClueGaudiAlgorithmWrapper<2>;
+DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperCUDA2)
+#elif defined(ALPAKA_ACC_GPU_HIP_ENABLED)
+using ClueGaudiAlgorithmWrapperHIP3 = ClueGaudiAlgorithmWrapper<3>;
+DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperHIP3)
+using ClueGaudiAlgorithmWrapperHIP2 = ClueGaudiAlgorithmWrapper<2>;
+DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperHIP2)
+#else
 using ClueGaudiAlgorithmWrapper3 = ClueGaudiAlgorithmWrapper<3>;
 DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper3)
 using ClueGaudiAlgorithmWrapper2 = ClueGaudiAlgorithmWrapper<2>;
 DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper2)
+#endif
 
 template <uint8_t nDim>
 ClueGaudiAlgorithmWrapper<nDim>::ClueGaudiAlgorithmWrapper(const std::string& name,
@@ -57,10 +69,6 @@ ClueGaudiAlgorithmWrapper<nDim>::ClueGaudiAlgorithmWrapper(const std::string& na
 
 template <uint8_t nDim>
 StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
-  bool clue_verbose = false;
-  if (msgLevel(MSG::INFO) || msgLevel(MSG::DEBUG)) {
-    clue_verbose = true;
-  }
 
   using Acc = ALPAKA_ACCELERATOR_NAMESPACE_CLUE::Acc1D;
   using Dev = alpaka::Dev<Acc>;
