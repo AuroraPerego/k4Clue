@@ -42,6 +42,7 @@ inp.collections = [
   'MCParticles',
   'ECALBarrel',
   'ECALEndcap',
+  'CalohitMCTruthLink',
 ]
 inp.OutputLevel = WARNING
 
