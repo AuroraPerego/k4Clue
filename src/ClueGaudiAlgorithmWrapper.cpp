@@ -237,6 +237,7 @@ void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClusters(
     std::vector<clue::CLUECalorimeterHit>& clue_hits,
     const std::map<int, std::vector<int>> clusterMap,
     edm4hep::ClusterCollection* clusters) const {
+  // FIXME for Ndim == 3 do not split clusters on layers and for Ndim == 2 they are already splitted
   std::map<int, std::vector<int>> clustersLayer;
   for (auto cl : clusterMap) {
     // Outliers should not create a cluster

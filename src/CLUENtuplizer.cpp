@@ -71,6 +71,18 @@ StatusCode CLUENtuplizer::initialize() {
     return StatusCode::FAILURE;
   }
 
+  t_MCParticles = new TTree("MCParticles", "Monte Carlo Particles ntuple");
+  if (m_ths->regTree("/rec/MCParticles", t_MCParticles).isFailure()) {
+    error() << "Couldn't register MC Particles tree" << endmsg;
+    return StatusCode::FAILURE;
+  }
+
+  t_links = new TTree("associations", "associations ntuple");
+  if (m_ths->regTree("/rec/associations", t_links).isFailure()) {
+    error() << "Couldn't register associations tree" << endmsg;
+    return StatusCode::FAILURE;
+  }
+
   initializeTrees();
 
   return StatusCode::SUCCESS;
@@ -95,12 +107,13 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
                 });
   info() << "MC Particles = " << mcps->size() << " (of which primaries = " << mcps_primary
          << ")" << endmsg;
-  // If there is more than one primary, skip event
-  if (singleMCParticle && mcps_primary > 1) {
-    warning() << "This event is skipped because there are " << mcps_primary
-              << " primary MC particles." << endmsg;
-    return StatusCode::SUCCESS;
-  }
+
+  // If there is more than one primary, skip event FIXME
+  // if (singleMCParticle && mcps_primary > 1) {
+  //   warning() << "This event is skipped because there are " << mcps_primary
+  //             << " primary MC particles." << endmsg;
+  //   return StatusCode::SUCCESS;
+  // }
 
   DataObject* pStatus = nullptr;
   StatusCode scStatus =
@@ -114,6 +127,8 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
   // Read EB and EE collection
   EB_calo_coll = EB_calo_handle.get();
   EE_calo_coll = EE_calo_handle.get();
+  const auto EB_collID = EB_calo_coll->getID();
+  const auto EE_collID = EE_calo_coll->getID();
 
   debug() << "ECAL Calorimeter Hits Size = "
           << (*EB_calo_coll).size() + (*EE_calo_coll).size() << endmsg;
@@ -129,6 +144,77 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
   const auto cellIDstr = cellIDHandle.get();
   const BitFieldCoder bf(cellIDstr);
   cleanTrees();
+
+  auto links = link_handle.get();
+  std::vector<std::unordered_map<int32_t, float>> simToRecoLink(mcps->size());
+  std::vector<std::unordered_map<int32_t, float>> recoToSimLink(cluster_coll->size());
+  for (const auto& link : *links) {
+    const auto& hit = link.getFrom();
+    uint32_t index;
+    if (hit.getObjectID().collectionID == EB_collID)
+      index = link.getFrom().getObjectID().index;
+    else if (hit.getObjectID().collectionID == EE_collID)
+      index = link.getFrom().getObjectID().index + EB_calo_coll->size();
+    else
+      continue;
+    const auto& clueHit = (clue_calo_coll->vect)[index];
+    const auto clusId = clueHit.getClusterIndex();
+    simToRecoLink[link.getTo().getObjectID().index][clusId] += link.getWeight();
+    if (clusId!= -1) {
+      recoToSimLink[clusId][link.getTo().getObjectID().index] += link.getWeight();
+    }
+    //std::cout << "From: " << (clue_calo_coll->vect)[index] << "To: " << link.getTo() << "Weight: " << link.getWeight() << "\n";
+  }
+
+  std::vector<int> simIdMapping(mcps->size(), -1);
+  int id = 0;
+  for (std::size_t simId = 0; simId < mcps->size(); ++simId) {
+    if (not simToRecoLink[simId].empty()) {
+      simIdMapping[simId] = id;
+      ++id;
+      const auto& mcp = (*mcps)[simId];
+      m_sim_event.push_back(evNum);
+      m_sim_pdg.push_back(mcp.getPDG());
+      m_sim_charge.push_back(mcp.getCharge());
+      m_sim_vtx_x.push_back(mcp.getVertex().x);
+      m_sim_vtx_y.push_back(mcp.getVertex().y);
+      m_sim_vtx_z.push_back(mcp.getVertex().z);
+      m_sim_momentum_x.push_back(mcp.getMomentum().x);
+      m_sim_momentum_y.push_back(mcp.getMomentum().y);
+      m_sim_momentum_z.push_back(mcp.getMomentum().z);
+      m_sim_energy.push_back(mcp.getEnergy());
+      std::vector<int> ids;
+      ids.reserve(simToRecoLink[simId].size());
+      std::vector<float> shEn;
+      shEn.reserve(simToRecoLink[simId].size());
+      for (const auto& n : simToRecoLink[simId]) {
+        if (n.first != -1) {
+          ids.push_back(n.first);
+          shEn.push_back(n.second);
+        }
+      }
+      m_simToReco_index.push_back(ids);
+      m_simToReco_sharedEnergy.push_back(shEn);
+    }
+  }
+
+  for (std::size_t recoId = 0; recoId < recoToSimLink.size(); ++recoId) {
+    std::vector<int> ids;
+    ids.reserve(recoToSimLink[recoId].size());
+    std::vector<float> shEn;
+    shEn.reserve(recoToSimLink[recoId].size());
+    for (const auto& n : recoToSimLink[recoId]) {
+      if (simIdMapping[n.first] == -1)
+        throw error() << "No SimToReco but RecoToSim for simparticle " << n.first << endmsg;
+      ids.push_back(simIdMapping[n.first]);
+      shEn.push_back(n.second);
+    }
+    m_recoToSim_index.push_back(ids);
+    m_recoToSim_sharedEnergy.push_back(shEn);
+  }
+
+  t_MCParticles->Fill();
+  t_links->Fill();
 
   std::uint64_t ch_layer = 0;
   std::uint64_t nClusters = 0;
@@ -299,6 +385,22 @@ void CLUENtuplizer::initializeTrees() {
   t_clhits->Branch("z", &m_clhits_z);
   t_clhits->Branch("energy", &m_clhits_energy);
 
+  t_MCParticles->Branch("event", &m_sim_event);
+  t_MCParticles->Branch("pdg", &m_sim_pdg);
+  t_MCParticles->Branch("charge", &m_sim_charge);
+  t_MCParticles->Branch("vertex_x", &m_sim_vtx_x);
+  t_MCParticles->Branch("vertex_y", &m_sim_vtx_y);
+  t_MCParticles->Branch("vertex_z", &m_sim_vtx_z);
+  t_MCParticles->Branch("p_x", &m_sim_momentum_x);
+  t_MCParticles->Branch("p_y", &m_sim_momentum_y);
+  t_MCParticles->Branch("p_z", &m_sim_momentum_z);
+  t_MCParticles->Branch("energy", &m_sim_energy);
+
+  t_links->Branch("simToRecoIndex", &m_simToReco_index);
+  t_links->Branch("simToRecoEnergy", &m_simToReco_sharedEnergy);
+  t_links->Branch("recoToSimIndex", &m_recoToSim_index);
+  t_links->Branch("recoToSimEnergy", &m_recoToSim_sharedEnergy);
+
   return;
 }
 
@@ -337,6 +439,22 @@ void CLUENtuplizer::cleanTrees() const {
   m_clhits_y.clear();
   m_clhits_z.clear();
   m_clhits_energy.clear();
+
+  m_sim_event.clear();
+  m_sim_pdg.clear();
+  m_sim_charge.clear();
+  m_sim_vtx_x.clear();
+  m_sim_vtx_y.clear();
+  m_sim_vtx_z.clear();
+  m_sim_momentum_x.clear();
+  m_sim_momentum_y.clear();
+  m_sim_momentum_z.clear();
+  m_sim_energy.clear();
+
+  m_simToReco_index.clear();
+  m_simToReco_sharedEnergy.clear();
+  m_recoToSim_index.clear();
+  m_recoToSim_sharedEnergy.clear();
 
   return;
 }
