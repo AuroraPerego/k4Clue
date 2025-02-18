@@ -69,7 +69,6 @@ ClueGaudiAlgorithmWrapper<nDim>::ClueGaudiAlgorithmWrapper(const std::string& na
 
 template <uint8_t nDim>
 StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
-
   using Acc = ALPAKA_ACCELERATOR_NAMESPACE_CLUE::Acc1D;
   using Dev = alpaka::Dev<Acc>;
   using Queue = ALPAKA_ACCELERATOR_NAMESPACE_CLUE::Queue;
@@ -237,55 +236,45 @@ void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClusters(
     std::vector<clue::CLUECalorimeterHit>& clue_hits,
     const std::map<int, std::vector<int>> clusterMap,
     edm4hep::ClusterCollection* clusters) const {
-  // FIXME for Ndim == 3 do not split clusters on layers and for Ndim == 2 they are already splitted
-  std::map<int, std::vector<int>> clustersLayer;
   for (auto cl : clusterMap) {
     // Outliers should not create a cluster
     if (cl.first == -1) {
       continue;
     }
 
+    auto cluster = clusters->create();
+    unsigned int maxEnergyIndex = 0;
+    float maxEnergyValue = 0.f;
     for (auto index : cl.second) {
-      clustersLayer[clue_hits[index].getLayer()].push_back(index);
-    }
-
-    for (auto clLay : clustersLayer) {
-      auto cluster = clusters->create();
-      unsigned int maxEnergyIndex = 0;
-      float maxEnergyValue = 0.f;
-
-      for (auto index : clLay.second) {
-        if (clue_hits[index].inBarrel()) {
-          cluster.addToHits(EB_calo_coll->at(index));
-        }
-        if (clue_hits[index].inEndcap()) {
-          cluster.addToHits(EE_calo_coll->at(index));
-        }
-
-        if (clue_hits[index].getEnergy() > maxEnergyValue) {
-          maxEnergyValue = clue_hits[index].getEnergy();
-          maxEnergyIndex = index;
-        }
+      if (clue_hits[index].inBarrel()) {
+        cluster.addToHits(EB_calo_coll->at(index));
       }
-      float energy = 0.f;
-      float sumEnergyErrSquared = 0.f;
-      std::for_each(cluster.getHits().begin(),
-                    cluster.getHits().end(),
-                    [&energy, &sumEnergyErrSquared](edm4hep::CalorimeterHit elem) {
-                      energy += elem.getEnergy();
-                      sumEnergyErrSquared +=
-                          pow(elem.getEnergyError() / (1. * elem.getEnergy()), 2);
-                    });
-      cluster.setEnergy(energy);
-      cluster.setEnergyError(sqrt(sumEnergyErrSquared));
+      if (clue_hits[index].inEndcap()) {
+        cluster.addToHits(EE_calo_coll->at(index));
+      }
 
-      calculatePosition(&cluster);
-
-      //JUST A PLACEHOLDER FOR NOW: TO BE FIXED
-      cluster.setPositionError({0.00, 0.00, 0.00, 0.00, 0.00, 0.00});
-      cluster.setType(clue_hits[maxEnergyIndex].getType());
+      if (clue_hits[index].getEnergy() > maxEnergyValue) {
+        maxEnergyValue = clue_hits[index].getEnergy();
+        maxEnergyIndex = index;
+      }
     }
-    clustersLayer.clear();
+    float energy = 0.f;
+    float sumEnergyErrSquared = 0.f;
+    std::for_each(cluster.getHits().begin(),
+                  cluster.getHits().end(),
+                  [&energy, &sumEnergyErrSquared](edm4hep::CalorimeterHit elem) {
+                    energy += elem.getEnergy();
+                    sumEnergyErrSquared +=
+                        pow(elem.getEnergyError() / (1. * elem.getEnergy()), 2);
+                  });
+    cluster.setEnergy(energy);
+    cluster.setEnergyError(sqrt(sumEnergyErrSquared));
+
+    calculatePosition(&cluster);
+
+    //JUST A PLACEHOLDER FOR NOW: TO BE FIXED
+    cluster.setPositionError({0.00, 0.00, 0.00, 0.00, 0.00, 0.00});
+    cluster.setType(clue_hits[maxEnergyIndex].getType());
   }
 
   return;
