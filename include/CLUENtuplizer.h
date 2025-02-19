@@ -40,8 +40,7 @@ public:
   /// Constructor.
   CLUENtuplizer(const std::string& name, ISvcLocator* svcLoc);
   /// Destructor.
-  ~CLUENtuplizer() {
-  };
+  ~CLUENtuplizer(){};
   /// Initialize.
   virtual StatusCode initialize();
   /// Initialize tree.
@@ -87,6 +86,7 @@ private:
   mutable std::vector<float> m_hits_phi;
   mutable std::vector<float> m_hits_rho;
   mutable std::vector<float> m_hits_delta;
+  mutable std::vector<float> m_hits_time;
   mutable std::vector<float> m_hits_energy;
 
   mutable TTree* t_clusters{nullptr};
@@ -98,6 +98,7 @@ private:
   mutable std::vector<float> m_clusters_x;
   mutable std::vector<float> m_clusters_y;
   mutable std::vector<float> m_clusters_z;
+  mutable std::vector<float> m_clusters_time;
   mutable std::vector<float> m_clusters_energy;
   mutable std::vector<float> m_clusters_totEnergy;
   mutable std::vector<float> m_clusters_totEnergyHits;
@@ -108,6 +109,7 @@ private:
   mutable std::vector<float> m_clhits_x;
   mutable std::vector<float> m_clhits_y;
   mutable std::vector<float> m_clhits_z;
+  mutable std::vector<float> m_clhits_time;
   mutable std::vector<float> m_clhits_energy;
 
   mutable TTree* t_MCParticles{nullptr};
@@ -120,6 +122,7 @@ private:
   mutable std::vector<float> m_sim_momentum_x;
   mutable std::vector<float> m_sim_momentum_y;
   mutable std::vector<float> m_sim_momentum_z;
+  mutable std::vector<float> m_sim_time;
   mutable std::vector<float> m_sim_energy;
 
   mutable TTree* t_links{nullptr};

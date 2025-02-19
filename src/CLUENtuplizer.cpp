@@ -95,13 +95,11 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
 
   auto mcps = mcp_handle.get();
   int mcps_primary = 0;
-  std::for_each((*mcps).begin(),
-                (*mcps).end(),
-                [&mcps_primary](edm4hep::MCParticle mcp) {
-                  if (mcp.getGeneratorStatus() == 1) {
-                    mcps_primary += 1;
-                  }
-                });
+  std::for_each((*mcps).begin(), (*mcps).end(), [&mcps_primary](edm4hep::MCParticle mcp) {
+    if (mcp.getGeneratorStatus() == 1) {
+      mcps_primary += 1;
+    }
+  });
   info() << "MC Particles = " << mcps->size() << " (of which primaries = " << mcps_primary
          << ")" << endmsg;
 
@@ -150,7 +148,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
     const auto& clueHit = (clue_calo_coll->vect)[index];
     const auto clusId = clueHit.getClusterIndex();
     simToRecoLink[link.getTo().getObjectID().index][clusId] += link.getWeight();
-    if (clusId!= -1) {
+    if (clusId != -1) {
       recoToSimLink[clusId][link.getTo().getObjectID().index] += link.getWeight();
     }
     //std::cout << "From: " << (clue_calo_coll->vect)[index] << "To: " << link.getTo() << "Weight: " << link.getWeight() << "\n";
@@ -172,6 +170,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       m_sim_momentum_x.push_back(mcp.getMomentum().x);
       m_sim_momentum_y.push_back(mcp.getMomentum().y);
       m_sim_momentum_z.push_back(mcp.getMomentum().z);
+      m_sim_time.push_back(mcp.getTime());
       m_sim_energy.push_back(mcp.getEnergy());
       std::vector<int> ids;
       ids.reserve(simToRecoLink[simId].size());
@@ -195,7 +194,8 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
     shEn.reserve(recoToSimLink[recoId].size());
     for (const auto& n : recoToSimLink[recoId]) {
       if (simIdMapping[n.first] == -1)
-        throw error() << "No SimToReco but RecoToSim for simparticle " << n.first << endmsg;
+        throw error() << "No SimToReco but RecoToSim for simparticle " << n.first
+                      << endmsg;
       ids.push_back(simIdMapping[n.first]);
       shEn.push_back(n.second);
     }
@@ -227,6 +227,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
     // Sum up energy of cluster hits and save info
     // Printout the hits that are in Ecal but not included in the clusters
     int maxLayer = 0;
+    std::vector<float> hits_time;
     for (const auto& hit : cl.getHits()) {
       // foundInECAL = false;
       /*
@@ -265,6 +266,8 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       m_clhits_x.push_back(hit.getPosition().x);
       m_clhits_y.push_back(hit.getPosition().y);
       m_clhits_z.push_back(hit.getPosition().z);
+      m_clhits_time.push_back(hit.getTime());
+      hits_time.push_back(hit.getTime());
       m_clhits_energy.push_back(hit.getEnergy());
       totEnergyHits += hit.getEnergy();
       totSize += 1;
@@ -281,6 +284,8 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       totEnergy += cl.getEnergy();
     }
     m_clusters_maxLayer.push_back(maxLayer);
+    m_clusters_time.push_back(std::accumulate(hits_time.begin(), hits_time.end(), 0.f) /
+                              hits_time.size());
   }
   m_clusters.push_back(nClusters);
   m_clusters_totEnergy.push_back(totEnergy);
@@ -312,6 +317,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
     m_hits_phi.push_back(clue_hit.getPhi());
     m_hits_rho.push_back(clue_hit.getRho());
     m_hits_delta.push_back(clue_hit.getDelta());
+    m_hits_time.push_back(clue_hit.getTime());
     m_hits_energy.push_back(clue_hit.getEnergy());
 
     if (clue_hit.isFollower()) {
@@ -350,6 +356,7 @@ void CLUENtuplizer::initializeTrees() {
   t_hits->Branch("phi", &m_hits_phi);
   t_hits->Branch("rho", &m_hits_rho);
   t_hits->Branch("delta", &m_hits_delta);
+  t_hits->Branch("time", &m_hits_time);
   t_hits->Branch("energy", &m_hits_energy);
 
   t_clusters->Branch("clusters", &m_clusters);
@@ -360,6 +367,7 @@ void CLUENtuplizer::initializeTrees() {
   t_clusters->Branch("x", &m_clusters_x);
   t_clusters->Branch("y", &m_clusters_y);
   t_clusters->Branch("z", &m_clusters_z);
+  t_clusters->Branch("time", &m_clusters_time);
   t_clusters->Branch("energy", &m_clusters_energy);
   t_clusters->Branch("totEnergy", &m_clusters_totEnergy);
   t_clusters->Branch("totEnergyHits", &m_clusters_totEnergyHits);
@@ -369,6 +377,7 @@ void CLUENtuplizer::initializeTrees() {
   t_clhits->Branch("x", &m_clhits_x);
   t_clhits->Branch("y", &m_clhits_y);
   t_clhits->Branch("z", &m_clhits_z);
+  t_clhits->Branch("time", &m_clhits_time);
   t_clhits->Branch("energy", &m_clhits_energy);
 
   t_MCParticles->Branch("event", &m_sim_event);
@@ -380,6 +389,7 @@ void CLUENtuplizer::initializeTrees() {
   t_MCParticles->Branch("p_x", &m_sim_momentum_x);
   t_MCParticles->Branch("p_y", &m_sim_momentum_y);
   t_MCParticles->Branch("p_z", &m_sim_momentum_z);
+  t_MCParticles->Branch("time", &m_sim_time);
   t_MCParticles->Branch("energy", &m_sim_energy);
 
   t_links->Branch("simToRecoIndex", &m_simToReco_index);
@@ -403,6 +413,7 @@ void CLUENtuplizer::cleanTrees() const {
   m_hits_phi.clear();
   m_hits_rho.clear();
   m_hits_delta.clear();
+  m_hits_time.clear();
   m_hits_energy.clear();
 
   m_clusters.clear();
@@ -413,6 +424,7 @@ void CLUENtuplizer::cleanTrees() const {
   m_clusters_x.clear();
   m_clusters_y.clear();
   m_clusters_z.clear();
+  m_clusters_time.clear();
   m_clusters_energy.clear();
   m_clusters_totEnergy.clear();
   m_clusters_totEnergyHits.clear();
@@ -422,6 +434,7 @@ void CLUENtuplizer::cleanTrees() const {
   m_clhits_x.clear();
   m_clhits_y.clear();
   m_clhits_z.clear();
+  m_clhits_time.clear();
   m_clhits_energy.clear();
 
   m_sim_event.clear();
@@ -433,6 +446,7 @@ void CLUENtuplizer::cleanTrees() const {
   m_sim_momentum_x.clear();
   m_sim_momentum_y.clear();
   m_sim_momentum_z.clear();
+  m_sim_time.clear();
   m_sim_energy.clear();
 
   m_simToReco_index.clear();
