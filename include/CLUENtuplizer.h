@@ -72,8 +72,6 @@ private:
   MetaDataHandle<std::string> cellIDHandle{
       EB_calo_handle, edm4hep::labels::CellIDEncoding, Gaudi::DataHandle::Reader};
 
-  bool singleMCParticle = false;
-
   SmartIF<ITHistSvc> m_ths;  ///< THistogram service
 
   mutable TTree* t_hits{nullptr};
@@ -90,7 +88,6 @@ private:
   mutable std::vector<float> m_hits_rho;
   mutable std::vector<float> m_hits_delta;
   mutable std::vector<float> m_hits_energy;
-  mutable std::vector<float> m_hits_MCEnergy;
 
   mutable TTree* t_clusters{nullptr};
   mutable std::vector<int> m_clusters;
@@ -104,7 +101,6 @@ private:
   mutable std::vector<float> m_clusters_energy;
   mutable std::vector<float> m_clusters_totEnergy;
   mutable std::vector<float> m_clusters_totEnergyHits;
-  mutable std::vector<float> m_clusters_MCEnergy;
 
   mutable TTree* t_clhits{nullptr};
   mutable std::vector<int> m_clhits_event;

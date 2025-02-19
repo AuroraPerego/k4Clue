@@ -36,10 +36,9 @@ CLUENtuplizer::CLUENtuplizer(const std::string& name, ISvcLocator* svcLoc)
   declareProperty("EndcapCaloHitsCollection",
                   EE_calo_handle,
                   "Collection for Endcap Calo Hits used in input");
-  declareProperty("SingleMCParticle",
-                  singleMCParticle,
-                  "If this is True, the analysis is run only if one MCParticle is "
-                  "present in the event");
+  declareProperty("CalohitMCTruthLink",
+                  link_handle,
+                  "Association between MCParticles and Calorimeter Hits");
 }
 
 StatusCode CLUENtuplizer::initialize() {
@@ -96,24 +95,15 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
 
   auto mcps = mcp_handle.get();
   int mcps_primary = 0;
-  float mcp_primary_energy = 0.f;
   std::for_each((*mcps).begin(),
                 (*mcps).end(),
-                [&mcps_primary, &mcp_primary_energy](edm4hep::MCParticle mcp) {
+                [&mcps_primary](edm4hep::MCParticle mcp) {
                   if (mcp.getGeneratorStatus() == 1) {
                     mcps_primary += 1;
-                    mcp_primary_energy = mcp.getEnergy();
                   }
                 });
   info() << "MC Particles = " << mcps->size() << " (of which primaries = " << mcps_primary
          << ")" << endmsg;
-
-  // If there is more than one primary, skip event FIXME
-  // if (singleMCParticle && mcps_primary > 1) {
-  //   warning() << "This event is skipped because there are " << mcps_primary
-  //             << " primary MC particles." << endmsg;
-  //   return StatusCode::SUCCESS;
-  // }
 
   DataObject* pStatus = nullptr;
   StatusCode scStatus =
@@ -295,7 +285,6 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
   m_clusters.push_back(nClusters);
   m_clusters_totEnergy.push_back(totEnergy);
   m_clusters_totEnergyHits.push_back(totEnergyHits);
-  m_clusters_MCEnergy.push_back(mcp_primary_energy);
   m_clusters_totSize.push_back(totSize);
   t_clusters->Fill();
   t_clhits->Fill();
@@ -324,7 +313,6 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
     m_hits_rho.push_back(clue_hit.getRho());
     m_hits_delta.push_back(clue_hit.getDelta());
     m_hits_energy.push_back(clue_hit.getEnergy());
-    m_hits_MCEnergy.push_back(mcp_primary_energy);
 
     if (clue_hit.isFollower()) {
       m_hits_status.push_back(1);
@@ -363,7 +351,6 @@ void CLUENtuplizer::initializeTrees() {
   t_hits->Branch("rho", &m_hits_rho);
   t_hits->Branch("delta", &m_hits_delta);
   t_hits->Branch("energy", &m_hits_energy);
-  t_hits->Branch("MCEnergy", &m_hits_MCEnergy);
 
   t_clusters->Branch("clusters", &m_clusters);
   t_clusters->Branch("event", &m_clusters_event);
@@ -376,7 +363,6 @@ void CLUENtuplizer::initializeTrees() {
   t_clusters->Branch("energy", &m_clusters_energy);
   t_clusters->Branch("totEnergy", &m_clusters_totEnergy);
   t_clusters->Branch("totEnergyHits", &m_clusters_totEnergyHits);
-  t_clusters->Branch("MCEnergy", &m_clusters_MCEnergy);
 
   t_clhits->Branch("event", &m_clhits_event);
   t_clhits->Branch("layer", &m_clhits_layer);
@@ -418,7 +404,6 @@ void CLUENtuplizer::cleanTrees() const {
   m_hits_rho.clear();
   m_hits_delta.clear();
   m_hits_energy.clear();
-  m_hits_MCEnergy.clear();
 
   m_clusters.clear();
   m_clusters_event.clear();
@@ -431,7 +416,6 @@ void CLUENtuplizer::cleanTrees() const {
   m_clusters_energy.clear();
   m_clusters_totEnergy.clear();
   m_clusters_totEnergyHits.clear();
-  m_clusters_MCEnergy.clear();
 
   m_clhits_event.clear();
   m_clhits_layer.clear();
