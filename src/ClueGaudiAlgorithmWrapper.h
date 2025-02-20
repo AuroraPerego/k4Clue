@@ -63,9 +63,9 @@ private:
   // Parameters in input
   mutable const edm4hep::CalorimeterHitCollection* EB_calo_coll;
   mutable const edm4hep::CalorimeterHitCollection* EE_calo_coll;
-  float dc;
-  float rhoc;
-  float outlierDeltaFactor;
+  static std::vector<float> dc;
+  static std::vector<float> rhoc;
+  static std::vector<float> dm;
 
   // CLUE points
   mutable clue::CLUECalorimeterHitCollection clue_hit_coll;

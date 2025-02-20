@@ -58,9 +58,9 @@ ClueGaudiAlgorithmWrapper<nDim>::ClueGaudiAlgorithmWrapper(const std::string& na
   declareProperty("MinLocalDensity",
                   rhoc,
                   "Minimum local density for a point to be promoted as a Seed");
-  declareProperty("OutlierDeltaFactor",
-                  outlierDeltaFactor,
-                  "Multiplicative constant to be applied to CriticalDistance");
+  declareProperty("FollowerWindow",
+                  dm,
+                  "Side of the box inside which followers are searched");
   declareProperty("OutClusters", clustersHandle, "Clusters collection (output)");
   declareProperty("OutCaloHits",
                   caloHitsHandle,
@@ -79,7 +79,7 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
 
   auto start = std::chrono::high_resolution_clock::now();
   clueAlgo_ = std::make_optional<ALPAKA_ACCELERATOR_NAMESPACE_CLUE::CLUEAlgoAlpaka<nDim>>(
-      dc, rhoc, dc * outlierDeltaFactor, 10, *queue_);
+      dc.data(), rhoc.data(), dm.data(), 10, *queue_);
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
   info() << "ClueGaudiAlgorithmWrapper: Set up time: " << elapsed.count() * 1000 << " ms"
