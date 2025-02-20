@@ -269,6 +269,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       m_clhits_time.push_back(hit.getTime());
       hits_time.push_back(hit.getTime());
       m_clhits_energy.push_back(hit.getEnergy());
+      m_clhits_id.push_back(nClusters);
       totEnergyHits += hit.getEnergy();
       totSize += 1;
       /*
@@ -379,6 +380,7 @@ void CLUENtuplizer::initializeTrees() {
   t_clhits->Branch("z", &m_clhits_z);
   t_clhits->Branch("time", &m_clhits_time);
   t_clhits->Branch("energy", &m_clhits_energy);
+  t_clhits->Branch("clusterId", &m_clhits_id);
 
   t_MCParticles->Branch("event", &m_sim_event);
   t_MCParticles->Branch("pdg", &m_sim_pdg);
@@ -436,6 +438,7 @@ void CLUENtuplizer::cleanTrees() const {
   m_clhits_z.clear();
   m_clhits_time.clear();
   m_clhits_energy.clear();
+  m_clhits_id.clear();
 
   m_sim_event.clear();
   m_sim_pdg.clear();

@@ -106,6 +106,7 @@ private:
   mutable TTree* t_clhits{nullptr};
   mutable std::vector<int> m_clhits_event;
   mutable std::vector<int> m_clhits_layer;
+  mutable std::vector<int> m_clhits_id;
   mutable std::vector<float> m_clhits_x;
   mutable std::vector<float> m_clhits_y;
   mutable std::vector<float> m_clhits_z;
