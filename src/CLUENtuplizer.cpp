@@ -36,9 +36,12 @@ CLUENtuplizer::CLUENtuplizer(const std::string& name, ISvcLocator* svcLoc)
   declareProperty("EndcapCaloHitsCollection",
                   EE_calo_handle,
                   "Collection for Endcap Calo Hits used in input");
-  declareProperty("CalohitMCTruthLink",
+  declareProperty("RelationCaloHit",
                   link_handle,
-                  "Association between MCParticles and Calorimeter Hits");
+                  "Association between simulated hits and calorimeter hits");
+  declareProperty("ClusterMCTruthLink",
+                  linkClusters_handle,
+                  "Association between MCParticles and Clusters");
 }
 
 StatusCode CLUENtuplizer::initialize() {
@@ -135,30 +138,95 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
   cleanTrees();
 
   auto links = link_handle.get();
-  std::vector<std::unordered_map<int32_t, float>> simToRecoLink(mcps->size());
-  std::vector<std::unordered_map<int32_t, float>> recoToSimLink(cluster_coll->size());
+  std::vector<std::unordered_map<int32_t, float>> simToRecoByHitsLink(mcps->size());
+  std::vector<std::unordered_map<int32_t, float>> recoToSimByHitsLink(
+      cluster_coll->size());
   for (const auto& link : *links) {
-    const auto& hit = link.getFrom();
+    const auto& caloHit = link.getFrom();
+    const auto& simHit = link.getTo();
+    // std::cout << "From: " << caloHit << "\nTo: " << simHit << "\nWeight: " << weight << "\n\n";
+
+    // get the CLUE cluster ID
     uint32_t index;
-    if (hit.getObjectID().collectionID == EB_collID)
+    if (caloHit.getObjectID().collectionID == EB_collID)
       index = link.getFrom().getObjectID().index;
-    else if (hit.getObjectID().collectionID == EE_collID)
+    else if (caloHit.getObjectID().collectionID == EE_collID)
       index = link.getFrom().getObjectID().index + EB_calo_coll->size();
     else
       continue;
     const auto& clueHit = (clue_calo_coll->vect)[index];
     const auto clusId = clueHit.getClusterIndex();
-    simToRecoLink[link.getTo().getObjectID().index][clusId] += link.getWeight();
-    if (clusId != -1) {
-      recoToSimLink[clusId][link.getTo().getObjectID().index] += link.getWeight();
+    if (clusId == -1)
+      continue;
+
+    // get the MC Particle(s)
+    std::unordered_map<int32_t, float> mcpContrib;
+    const auto& contributions = simHit.getContributions();
+    for (const auto& contr : contributions) {
+      const auto mcpIdx = contr.getParticle().getObjectID().index;
+      mcpContrib[mcpIdx] += contr.getEnergy();
     }
-    //std::cout << "From: " << (clue_calo_coll->vect)[index] << "To: " << link.getTo() << "Weight: " << link.getWeight() << "\n";
+    for (const auto& [mcpIdx, energy] : mcpContrib) {
+      simToRecoByHitsLink[mcpIdx][clusId] += energy;
+      recoToSimByHitsLink[clusId][mcpIdx] += caloHit.getEnergy();
+    }
   }
+
+  std::for_each(
+      recoToSimByHitsLink.begin(),
+      recoToSimByHitsLink.end(),
+      [index = 0, this](const std::unordered_map<int32_t, float>& umap) mutable {
+        auto en = (*cluster_coll)[index].getEnergy();
+        std::cout << "reco Index " << index << ", energy " << en << ":\n";
+        std::for_each(
+            umap.begin(), umap.end(), [en](const std::pair<int32_t, float>& pair) {
+              std::cout << "  Key sim: " << pair.first << ", Value: " << pair.second
+                        << ", Fraction: " << pair.second / en << "\n";
+            });
+        index++;
+      });
+  std::for_each(simToRecoByHitsLink.begin(),
+                simToRecoByHitsLink.end(),
+                [index = 0](const std::unordered_map<int32_t, float>& umap) mutable {
+                  std::cout << "sim Index " << index++ << ":\n";
+                  std::for_each(umap.begin(),
+                                umap.end(),
+                                [](const std::pair<int32_t, float>& pair) {
+                                  std::cout << "  Key reco: " << pair.first
+                                            << ", Value: " << pair.second << "\n";
+                                });
+                });
+
+  auto linksClus = linkClusters_handle.get();
+  std::multimap<uint32_t, std::pair<uint32_t, float>> simToRecoLink;
+  std::multimap<uint32_t, std::pair<uint32_t, float>> recoToSimLink;
+  for (const auto& link : *linksClus) {
+    const auto recIdx = link.getFrom().getObjectID().index;
+    const auto simIdx = link.getTo().getObjectID().index;
+    const auto weight = link.getWeight();
+    simToRecoLink.emplace(simIdx, std::make_pair(recIdx, weight));
+    recoToSimLink.emplace(recIdx, std::make_pair(simIdx, weight));
+  }
+
+  std::cout << "Content of the sim2reco associator\n";
+  std::ranges::for_each(simToRecoLink, [](const auto& pair) {
+    std::cout << std::format("key = {}, assoc = ({}, {})\n",
+                             pair.first,
+                             pair.second.first,
+                             pair.second.second);
+  });
+  std::cout << "Content of the reco2sim associator\n";
+  std::ranges::for_each(recoToSimLink, [](const auto& pair) {
+    std::cout << std::format("key = {}, assoc = ({}, {})\n",
+                             pair.first,
+                             pair.second.first,
+                             pair.second.second);
+  });
 
   std::vector<int> simIdMapping(mcps->size(), -1);
   int id = 0;
   for (std::size_t simId = 0; simId < mcps->size(); ++simId) {
-    if (not simToRecoLink[simId].empty()) {
+    if (simToRecoLink.contains(simId)) {
       simIdMapping[simId] = id;
       ++id;
       const auto& mcp = (*mcps)[simId];
@@ -174,32 +242,34 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       m_sim_time.push_back(mcp.getTime());
       m_sim_energy.push_back(mcp.getEnergy());
       std::vector<int> ids;
-      ids.reserve(simToRecoLink[simId].size());
       std::vector<float> shEn;
-      shEn.reserve(simToRecoLink[simId].size());
-      for (const auto& n : simToRecoLink[simId]) {
-        if (n.first != -1) {
-          ids.push_back(n.first);
-          shEn.push_back(n.second);
-        }
-      }
+      const auto size = simToRecoLink.count(simId);
+      ids.reserve(size);
+      shEn.reserve(size);
+      auto range = simToRecoLink.equal_range(simId);
+      std::for_each(range.first, range.second, [&ids, &shEn](const auto& pair) {
+        ids.push_back(pair.second.first);
+        shEn.push_back(pair.second.second);
+      });
       m_simToReco_index.push_back(ids);
       m_simToReco_sharedEnergy.push_back(shEn);
     }
   }
 
-  for (std::size_t recoId = 0; recoId < recoToSimLink.size(); ++recoId) {
+  for (std::size_t recoId = 0; recoId < cluster_coll->size(); ++recoId) {
     std::vector<int> ids;
-    ids.reserve(recoToSimLink[recoId].size());
     std::vector<float> shEn;
-    shEn.reserve(recoToSimLink[recoId].size());
-    for (const auto& n : recoToSimLink[recoId]) {
-      if (simIdMapping[n.first] == -1)
-        throw error() << "No SimToReco but RecoToSim for simparticle " << n.first
+    const auto size = recoToSimLink.count(recoId);
+    ids.reserve(size);
+    shEn.reserve(size);
+    auto range = recoToSimLink.equal_range(recoId);
+    std::for_each(range.first, range.second, [&](const auto& pair) {
+      if (simIdMapping[pair.second.first] == -1)
+        throw error() << "No SimToReco but RecoToSim for simparticle " << pair.first
                       << endmsg;
-      ids.push_back(simIdMapping[n.first]);
-      shEn.push_back(n.second);
-    }
+      ids.push_back(simIdMapping[pair.second.first]);
+      shEn.push_back(pair.second.second);
+    });
     m_recoToSim_index.push_back(ids);
     m_recoToSim_sharedEnergy.push_back(shEn);
   }

@@ -27,7 +27,8 @@
 #include <edm4hep/CalorimeterHitCollection.h>
 #include <edm4hep/ClusterCollection.h>
 #include <edm4hep/MCParticleCollection.h>
-#include <edm4hep/CaloHitMCParticleLinkCollection.h>
+#include <edm4hep/CaloHitSimCaloHitLinkCollection.h>
+#include <edm4hep/ClusterMCParticleLinkCollection.h>
 #include <edm4hep/EventHeaderCollection.h>
 #include <edm4hep/Constants.h>
 #include "CLUECalorimeterHit.h"
@@ -66,8 +67,10 @@ private:
       "EventHeader", Gaudi::DataHandle::Reader, this};
   mutable DataHandle<edm4hep::MCParticleCollection> mcp_handle{
       "MCParticles", Gaudi::DataHandle::Reader, this};
-  mutable DataHandle<edm4hep::CaloHitMCParticleLinkCollection> link_handle{
-      "CalohitMCTruthLink", Gaudi::DataHandle::Reader, this};
+  mutable DataHandle<edm4hep::CaloHitSimCaloHitLinkCollection> link_handle{
+      "RelationCaloHit", Gaudi::DataHandle::Reader, this};
+  mutable DataHandle<edm4hep::ClusterMCParticleLinkCollection> linkClusters_handle{
+      "ClusterMCTruthLink", Gaudi::DataHandle::Reader, this};
   MetaDataHandle<std::string> cellIDHandle{
       EB_calo_handle, edm4hep::labels::CellIDEncoding, Gaudi::DataHandle::Reader};
 
