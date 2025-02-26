@@ -49,11 +49,11 @@ public:
                                  float* floatBuffer,
                                  int* intBuffer,
                                  const bool isBarrel) const;
-  std::map<int, std::vector<int>> runAlgo(
+  std::vector<std::vector<int>> runAlgo(
       std::vector<clue::CLUECalorimeterHit>& clue_hits, const bool isBarrel) const;
 
-  void fillFinalClusters(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                         const std::map<int, std::vector<int>> clusterMap,
+  void fillFinalClusters(std::vector<clue::CLUECalorimeterHit> const& clue_hits,
+                         std::vector<std::vector<int>> const& clusterMap,
                          edm4hep::ClusterCollection* clusters) const;
   void calculatePosition(edm4hep::MutableCluster* cluster) const;
   void transformClustersInCaloHits(edm4hep::ClusterCollection* clusters,

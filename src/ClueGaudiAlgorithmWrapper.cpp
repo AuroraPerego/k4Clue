@@ -177,9 +177,9 @@ PointsSoA<nDim> ClueGaudiAlgorithmWrapper<nDim>::fillCLUEPoints(
 }
 
 template <uint8_t nDim>
-std::map<int, std::vector<int>> ClueGaudiAlgorithmWrapper<nDim>::runAlgo(
+std::vector<std::vector<int>> ClueGaudiAlgorithmWrapper<nDim>::runAlgo(
     std::vector<clue::CLUECalorimeterHit>& clue_hits, const bool isBarrel) const {
-  std::map<int, std::vector<int>> clueClusters;
+  std::vector<std::vector<int>> clueClusters;
 
   // Fill CLUE inputs
   size_t nPoints = clue_hits.size();
@@ -233,19 +233,14 @@ std::map<int, std::vector<int>> ClueGaudiAlgorithmWrapper<nDim>::runAlgo(
 
 template <uint8_t nDim>
 void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClusters(
-    std::vector<clue::CLUECalorimeterHit>& clue_hits,
-    const std::map<int, std::vector<int>> clusterMap,
+    std::vector<clue::CLUECalorimeterHit> const& clue_hits,
+    std::vector<std::vector<int>> const& clusterMap,
     edm4hep::ClusterCollection* clusters) const {
   for (auto cl : clusterMap) {
-    // Outliers should not create a cluster
-    if (cl.first == -1) {
-      continue;
-    }
-
     auto cluster = clusters->create();
     unsigned int maxEnergyIndex = 0;
     float maxEnergyValue = 0.f;
-    for (auto index : cl.second) {
+    for (auto index : cl) {
       if (clue_hits[index].inBarrel()) {
         cluster.addToHits(EB_calo_coll->at(index));
       }
@@ -385,7 +380,8 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::execute(const EventContext&) const {
 
   // Run CLUE in the barrel
   if (!clue_hit_coll_barrel.vect.empty()) {
-    std::map<int, std::vector<int>> clueClustersBarrel =
+    //std::vector<std::vector<int>> clueClustersBarrel =
+    auto clueClustersBarrel =
         runAlgo(clue_hit_coll_barrel.vect, true);
     debug() << "Produced " << clueClustersBarrel.size() << " clusters in ECAL Barrel"
             << endmsg;
@@ -428,7 +424,7 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::execute(const EventContext&) const {
 
   // Run CLUE in the endcap
   if (!clue_hit_coll_endcap.vect.empty()) {
-    std::map<int, std::vector<int>> clueClustersEndcap =
+    auto clueClustersEndcap =
         runAlgo(clue_hit_coll_endcap.vect, false);
     debug() << "Produced " << clueClustersEndcap.size() << " clusters in ECAL Endcap"
             << endmsg;

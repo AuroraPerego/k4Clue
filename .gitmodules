@@ -1,4 +1,4 @@
 [submodule "CLUEstering"]
 	path = CLUEstering
-	url = git@github.com:AuroraPerego/CLUEstering.git
+	url = https://gitlab.cern.ch/kalos/CLUEstering.git
   branch = main
