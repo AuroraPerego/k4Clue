@@ -39,6 +39,9 @@ CLUENtuplizer::CLUENtuplizer(const std::string& name, ISvcLocator* svcLoc)
   declareProperty("CalohitMCTruthLink",
                   link_handle,
                   "Association between MCParticles and Calorimeter Hits");
+  declareProperty("ClusterMCTruthLink",
+                  linkClusters_handle,
+                  "Association between MCParticles and Clusters");
 }
 
 StatusCode CLUENtuplizer::initialize() {
@@ -152,6 +155,11 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       recoToSimLink[clusId][link.getTo().getObjectID().index] += link.getWeight();
     }
     //std::cout << "From: " << (clue_calo_coll->vect)[index] << "To: " << link.getTo() << "Weight: " << link.getWeight() << "\n";
+  }
+
+  auto linksClus = linkClusters_handle.get();
+  for (const auto& link : *linksClus) {
+    std::cout << "From: " << link.getFrom() << "\nTo: " << link.getTo() << "\nWeight: " << link.getWeight() << "\n\n";
   }
 
   std::vector<int> simIdMapping(mcps->size(), -1);
