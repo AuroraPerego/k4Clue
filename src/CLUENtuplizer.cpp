@@ -114,6 +114,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
   } else {
     throw std::runtime_error("CLUE hits collection not available");
   }
+  const auto& clue_calo_coll_vect = clue_calo_coll->vect;
 
   // Read EB and EE collection
   EB_calo_coll = EB_calo_handle.get();
@@ -152,7 +153,7 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       index = link.getFrom().getObjectID().index + EB_calo_coll->size();
     else
       continue;
-    const auto& clueHit = (clue_calo_coll->vect)[index];
+    const auto& clueHit = (clue_calo_coll_vect)[index];
     const auto clusId = clueHit.getClusterIndex();
     if (clusId == -1) continue;
 
@@ -360,17 +361,29 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
          << " with total energy (cl) = " << totEnergy << "; (hits) = " << totEnergyHits
          << endmsg;
 
+  auto clusInBarrel = std::max_element(clue_calo_coll_vect.begin(), clue_calo_coll_vect.end(),
+      [](const auto& a, const auto& b) {
+          if (not a.inBarrel()) return true; // if largest so far (a) in endcap take b
+          if (not b.inBarrel()) return false; // if b in endcap do not compare
+          return a.getClusterIndex() < b.getClusterIndex();  // if both in barrel compare
+      });
+  uint32_t offset = 0;
+  if (clusInBarrel != clue_calo_coll_vect.end() && clusInBarrel->inBarrel())
+    offset = clusInBarrel->getClusterIndex() + 1;
+
   std::uint64_t nSeeds = 0;
   std::uint64_t nFollowers = 0;
   std::uint64_t nOutliers = 0;
   totEnergy = 0;
-  debug() << "CLUE Calorimeter Hits Size = " << clue_calo_coll->vect.size() << endmsg;
-  for (const auto& clue_hit : (clue_calo_coll->vect)) {
+  debug() << "CLUE Calorimeter Hits Size = " << clue_calo_coll_vect.size() << endmsg;
+  for (const auto& clue_hit : (clue_calo_coll_vect)) {
     m_hits_event.push_back(evNum);
     if (clue_hit.inBarrel()) {
       m_hits_region.push_back(0);
+      m_hits_clusId.push_back(clue_hit.getClusterIndex());
     } else {
       m_hits_region.push_back(1);
+      m_hits_clusId.push_back(clue_hit.getClusterIndex() + offset);
     }
     m_hits_layer.push_back(clue_hit.getLayer());
     m_hits_x.push_back(clue_hit.getPosition().x);
@@ -398,7 +411,6 @@ StatusCode CLUENtuplizer::execute(const EventContext&) const {
       m_hits_status.push_back(0);
       nOutliers++;
     }
-    m_hits_clusId.push_back(clue_hit.getClusterIndex());
   }
   debug() << "Found: " << nSeeds << " seeds, " << nOutliers << " outliers, " << nFollowers
           << " followers. Total energy clusterized: " << totEnergy << " GeV" << endmsg;
