@@ -48,13 +48,17 @@ ClueGaudiAlgorithmWrapper<nDim>::ClueGaudiAlgorithmWrapper(const std::string& na
   declareProperty("EndcapCaloHitsCollection",
                   EE_calo_handle,
                   "Collection for Endcap Calo Hits used in input");
-  declareProperty("CriticalDistance", dc, "Used to compute the local density");
+  declareProperty(
+      "CriticalDistance", dc, "Distance used to compute the local density of a point");
   declareProperty("MinLocalDensity",
                   rhoc,
-                  "Minimum local density for a point to be promoted as a Seed");
-  declareProperty("OutlierDeltaFactor",
-                  outlierDeltaFactor,
-                  "Multiplicative constant to be applied to CriticalDistance");
+                  "Minimum energy density of a point to not be considered an outlier");
+  declareProperty("FollowerDistance",
+                  dm,
+                  "Critical distance for follower search and cluster expansion");
+  declareProperty("PointsPerBin",
+                  pointsPerBin,
+                  "Average number of points that are to be found inside a bin");
   declareProperty("OutClusters", clustersHandle, "Clusters collection (output)");
   declareProperty("OutCaloHits",
                   caloHitsHandle,
@@ -73,7 +77,7 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
 
   auto start = std::chrono::high_resolution_clock::now();
   clueAlgo_ = std::make_optional<ALPAKA_ACCELERATOR_NAMESPACE_CLUE::CLUEAlgoAlpaka<nDim>>(
-      dc, rhoc, dc * outlierDeltaFactor, 10, *queue_);
+      dc, rhoc, dm, pointsPerBin, *queue_);
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
   info() << "ClueGaudiAlgorithmWrapper: Set up time: " << elapsed.count() * 1000 << " ms"
@@ -192,8 +196,8 @@ std::vector<std::vector<int>> ClueGaudiAlgorithmWrapper<nDim>::runAlgo(
   clueAlgo_->make_clusters(cluePoints, kernel, *queue_, 256);
   auto finish = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = finish - start;
-  debug() << "ClueGaudiAlgorithmWrapper: Elapsed time: " << elapsed.count() * 1000
-          << " ms" << endmsg;
+  info() << "ClueGaudiAlgorithmWrapper: Elapsed time: " << elapsed.count() * 1000 << " ms"
+         << endmsg;
 
   clueClusters = clueAlgo_->getClusters(cluePoints);
 
@@ -375,18 +379,17 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::execute(const EventContext&) const {
   // Run CLUE in the barrel
   if (!clue_hit_coll_barrel.vect.empty()) {
     //std::vector<std::vector<int>> clueClustersBarrel =
-    auto clueClustersBarrel =
-        runAlgo(clue_hit_coll_barrel.vect, true);
-    debug() << "Produced " << clueClustersBarrel.size() << " clusters in ECAL Barrel"
-            << endmsg;
+    auto clueClustersBarrel = runAlgo(clue_hit_coll_barrel.vect, true);
+    info() << "Produced " << clueClustersBarrel.size() << " clusters in ECAL Barrel"
+           << endmsg;
 
     clue_hit_coll.vect.insert(clue_hit_coll.vect.end(),
                               clue_hit_coll_barrel.vect.begin(),
                               clue_hit_coll_barrel.vect.end());
 
     fillFinalClusters(clue_hit_coll_barrel.vect, clueClustersBarrel, finalClusters.get());
-    info() << "Saved " << finalClusters->size() << " clusters using ECAL Barrel hits"
-           << endmsg;
+    debug() << "Saved " << finalClusters->size() << " clusters using ECAL Barrel hits"
+            << endmsg;
   }
 
   // Total amount of EE+ and EE- layers (80)
@@ -418,18 +421,17 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::execute(const EventContext&) const {
 
   // Run CLUE in the endcap
   if (!clue_hit_coll_endcap.vect.empty()) {
-    auto clueClustersEndcap =
-        runAlgo(clue_hit_coll_endcap.vect, false);
-    debug() << "Produced " << clueClustersEndcap.size() << " clusters in ECAL Endcap"
-            << endmsg;
+    auto clueClustersEndcap = runAlgo(clue_hit_coll_endcap.vect, false);
+    info() << "Produced " << clueClustersEndcap.size() << " clusters in ECAL Endcap"
+           << endmsg;
 
     clue_hit_coll.vect.insert(clue_hit_coll.vect.end(),
                               clue_hit_coll_endcap.vect.begin(),
                               clue_hit_coll_endcap.vect.end());
 
     fillFinalClusters(clue_hit_coll_endcap.vect, clueClustersEndcap, finalClusters.get());
-    info() << "Saved " << finalClusters->size() << " clusters using ECAL Endcap hits"
-           << endmsg;
+    debug() << "Saved " << finalClusters->size() << " clusters using ECAL Endcap hits"
+            << endmsg;
   }
 
   info() << "Saved " << finalClusters->size() << " CLUE clusters in total." << endmsg;

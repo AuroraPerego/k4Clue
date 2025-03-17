@@ -65,7 +65,8 @@ private:
   mutable const edm4hep::CalorimeterHitCollection* EE_calo_coll;
   float dc;
   float rhoc;
-  float outlierDeltaFactor;
+  float dm;
+  int pointsPerBin = 10;
 
   // CLUE points
   mutable clue::CLUECalorimeterHitCollection clue_hit_coll;
