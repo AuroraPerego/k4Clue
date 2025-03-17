@@ -29,7 +29,6 @@ set(SOURCES_GPU
 
 set(SOURCES_CPU
   ${PROJECT_SOURCE_DIR}/src/CLUECalorimeterHit.cpp
-  ${PROJECT_SOURCE_DIR}/src/CLUENtuplizer.cpp
 )
 
 set(SOURCES ${SOURCES_CPU} ${SOURCES_GPU})

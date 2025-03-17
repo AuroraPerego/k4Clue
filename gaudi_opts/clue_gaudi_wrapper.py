@@ -21,8 +21,8 @@ from Gaudi.Configuration import WARNING, DEBUG
 from Configurables import k4DataSvc, MarlinProcessorWrapper
 
 from Configurables import PodioInput
-from Configurables import ClueGaudiAlgorithmWrapper__unsignedschar_3_ as ClueGaudiAlgorithmWrapper3
-from Configurables import ClueGaudiAlgorithmWrapper__unsignedschar_2_ as ClueGaudiAlgorithmWrapper2
+from Configurables import ClueGaudiAlgorithmWrapper3, ClueGaudiAlgorithmWrapperCUDA3
+from Configurables import ClueGaudiAlgorithmWrapper2
 from Configurables import CLUENtuplizer
 from Configurables import THistSvc
 from Configurables import PodioOutput
@@ -30,9 +30,8 @@ from Configurables import ApplicationMgr
 
 algList = []
 
-
 evtsvc = k4DataSvc('EventDataSvc')
-evtsvc.input = "/eos/user/a/aperego/fcc/k4Clue/build2/test/input_files/20240905_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root"
+evtsvc.input = "/eos/user/a/aperego/fcc/k4Clue/build/test/input_files/20240905_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root"
 
 inp = PodioInput('InputReader')
 inp.collections = [

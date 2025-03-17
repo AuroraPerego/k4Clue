@@ -28,20 +28,14 @@ using namespace DDSegmentation;
 using namespace std;
 
 #if defined(ALPAKA_ACC_GPU_CUDA_ENABLED)
-using ClueGaudiAlgorithmWrapperCUDA3 = ClueGaudiAlgorithmWrapper<3>;
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperCUDA3)
-using ClueGaudiAlgorithmWrapperCUDA2 = ClueGaudiAlgorithmWrapper<2>;
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperCUDA2)
+DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<3>, "ClueGaudiAlgorithmWrapperCUDA3")
+DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<2>, "ClueGaudiAlgorithmWrapperCUDA2")
 #elif defined(ALPAKA_ACC_GPU_HIP_ENABLED)
-using ClueGaudiAlgorithmWrapperHIP3 = ClueGaudiAlgorithmWrapper<3>;
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperHIP3)
-using ClueGaudiAlgorithmWrapperHIP2 = ClueGaudiAlgorithmWrapper<2>;
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapperHIP2)
+DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<3>, "ClueGaudiAlgorithmWrapperHIP3")
+DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<2>, "ClueGaudiAlgorithmWrapperHIP2")
 #else
-using ClueGaudiAlgorithmWrapper3 = ClueGaudiAlgorithmWrapper<3>;
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper3)
-using ClueGaudiAlgorithmWrapper2 = ClueGaudiAlgorithmWrapper<2>;
-DECLARE_COMPONENT(ClueGaudiAlgorithmWrapper2)
+DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<3>, "ClueGaudiAlgorithmWrapper3")
+DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<2>, "ClueGaudiAlgorithmWrapper2")
 #endif
 
 template <uint8_t nDim>
