@@ -30,9 +30,8 @@ source /cvmfs/sw.hsf.org/key4hep/setup.sh
 # then setup this project
 git clone --recurse-submodules https://github.com/key4hep/k4Clue.git
 cd k4Clue
-cmake -S . -B build
+cmake -S . -B build # -DCMAKE_PREFIX_PATH=/opt/rocm-6.2.2
 cmake --build build
-
 # if installation is needed
 mkdir install
 cd build/ ; cmake .. -DCMAKE_INSTALL_PREFIX=../install; make install
