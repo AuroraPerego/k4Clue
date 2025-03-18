@@ -40,23 +40,22 @@ public:
   virtual StatusCode initialize() override final;
 
   // Timing analysis
-  void exclude_stats_outliers(std::vector<float> &v);
-  std::pair<float, float> stats(const std::vector<float> &v) ;
-  void printTimingReport(std::vector<float> &vals, int repeats,
-                       const std::string label) ;
+  void exclude_stats_outliers(std::vector<float>& v);
+  std::pair<float, float> stats(const std::vector<float>& v);
+  void printTimingReport(std::vector<float>& vals, int repeats, const std::string label);
 
   void fillCLUEPoints(std::vector<clue::CLUECalorimeterHit>& clue_hits) const;
-  std::map<int, std::vector<int> > runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits, 
-                                           bool isBarrel) const;
+  std::map<int, std::vector<int> > runAlgo(
+      std::vector<clue::CLUECalorimeterHit>& clue_hits, bool isBarrel) const;
   void cleanCLUEPoints() const;
   void fillFinalClusters(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                         const std::map<int, std::vector<int> > clusterMap, 
+                         const std::map<int, std::vector<int> > clusterMap,
                          edm4hep::ClusterCollection* clusters) const;
-  void calculatePosition(edm4hep::MutableCluster* cluster) const ;
+  void calculatePosition(edm4hep::MutableCluster* cluster) const;
   void transformClustersInCaloHits(edm4hep::ClusterCollection* clusters,
-                                 edm4hep::CalorimeterHitCollection* caloHits) const;
+                                   edm4hep::CalorimeterHitCollection* caloHits) const;
 
-  private:
+private:
   // Parameters in input
   mutable const edm4hep::CalorimeterHitCollection* EB_calo_coll;
   mutable const edm4hep::CalorimeterHitCollection* EE_calo_coll;
@@ -72,19 +71,23 @@ public:
   mutable std::vector<int> layer;
   mutable std::vector<float> weight;
 
-  // Handle to read the calo cells and their cellID 
-  mutable DataHandle<edm4hep::CalorimeterHitCollection> EB_calo_handle {"BarrelInputHits", Gaudi::DataHandle::Reader, this};
-  mutable DataHandle<edm4hep::CalorimeterHitCollection> EE_calo_handle {"EndcapInputHits", Gaudi::DataHandle::Reader, this};
-  MetaDataHandle<std::string> cellIDHandle {EB_calo_handle, edm4hep::labels::CellIDEncoding, Gaudi::DataHandle::Reader};
+  // Handle to read the calo cells and their cellID
+  mutable DataHandle<edm4hep::CalorimeterHitCollection> EB_calo_handle{
+      "BarrelInputHits", Gaudi::DataHandle::Reader, this};
+  mutable DataHandle<edm4hep::CalorimeterHitCollection> EE_calo_handle{
+      "EndcapInputHits", Gaudi::DataHandle::Reader, this};
+  MetaDataHandle<std::string> cellIDHandle{
+      EB_calo_handle, edm4hep::labels::CellIDEncoding, Gaudi::DataHandle::Reader};
 
   // CLUE Algo
   mutable CLICdetBarrelCLUEAlgo clueAlgoBarrel_;
   mutable CLICdetEndcapCLUEAlgo clueAlgoEndcap_;
 
   // Collections in output
-  mutable DataHandle<edm4hep::CalorimeterHitCollection> caloHitsHandle{"CLUEClustersAsHits", Gaudi::DataHandle::Writer, this};
-  mutable DataHandle<edm4hep::ClusterCollection> clustersHandle{"CLUEClusters", Gaudi::DataHandle::Writer, this};
-
+  mutable DataHandle<edm4hep::CalorimeterHitCollection> caloHitsHandle{
+      "CLUEClustersAsHits", Gaudi::DataHandle::Writer, this};
+  mutable DataHandle<edm4hep::ClusterCollection> clustersHandle{
+      "CLUEClusters", Gaudi::DataHandle::Writer, this};
 };
 
 #endif

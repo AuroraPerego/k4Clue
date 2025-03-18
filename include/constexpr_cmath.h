@@ -23,8 +23,9 @@
 
 namespace reco {
   constexpr int32_t ceil(float num) {
-    return (static_cast<float>(static_cast<int32_t>(num)) == num) ? static_cast<int32_t>(num)
-                                                                  : static_cast<int32_t>(num) + ((num > 0) ? 1 : 0);
+    return (static_cast<float>(static_cast<int32_t>(num)) == num)
+               ? static_cast<int32_t>(num)
+               : static_cast<int32_t>(num) + ((num > 0) ? 1 : 0);
   }
 
   // reduce to [-pi,pi]
