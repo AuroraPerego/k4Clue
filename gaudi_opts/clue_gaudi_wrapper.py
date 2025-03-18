@@ -27,11 +27,14 @@ from Configurables import THistSvc
 from Configurables import PodioOutput
 from Configurables import ApplicationMgr
 
+from os import environ
+build_path = environ["ENV_CMAKE_BINARY_DIR"]
+
 algList = []
 
 
 evtsvc = k4DataSvc('EventDataSvc')
-# evtsvc.input =
+evtsvc.input = build_path + "/test/input_files/20240905_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root"
 
 inp = PodioInput('InputReader')
 inp.collections = [
