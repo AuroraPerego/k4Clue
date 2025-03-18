@@ -21,7 +21,8 @@ from Gaudi.Configuration import WARNING, DEBUG
 from Configurables import k4DataSvc, MarlinProcessorWrapper
 
 from Configurables import PodioInput
-from Configurables import ClueGaudiAlgorithmWrapper
+from Configurables import ClueGaudiAlgorithmWrapper3, ClueGaudiAlgorithmWrapperCUDA3
+from Configurables import ClueGaudiAlgorithmWrapper2
 from Configurables import CLUENtuplizer
 from Configurables import THistSvc
 from Configurables import PodioOutput
@@ -31,7 +32,6 @@ from os import environ
 build_path = environ["ENV_CMAKE_BINARY_DIR"]
 
 algList = []
-
 
 evtsvc = k4DataSvc('EventDataSvc')
 evtsvc.input = build_path + "/test/input_files/20240905_gammaFromVertex_10GeV_uniform_10events_reco_edm4hep.root"
@@ -53,25 +53,24 @@ MyAIDAProcessor.Parameters = {"FileName": ["histograms_clue_standalone"],
                     "Compress": ["1"],
                     }
 
-rho = 0.1 # MinLocalDensity
-dc = 25 # CriticalDistance
-do = 4 # OutlierDeltaFactor
-MyClueGaudiAlgorithmWrapper = ClueGaudiAlgorithmWrapper("ClueGaudiAlgorithmWrapperName")
+dc = 30
+rho = 0.1
+dm = 120
+MyClueGaudiAlgorithmWrapper = ClueGaudiAlgorithmWrapper3("ClueGaudiAlgorithmWrapperName")
 MyClueGaudiAlgorithmWrapper.BarrelCaloHitsCollection = "ECALBarrel"
 MyClueGaudiAlgorithmWrapper.EndcapCaloHitsCollection = "ECALEndcap"
 MyClueGaudiAlgorithmWrapper.CriticalDistance = dc
 MyClueGaudiAlgorithmWrapper.MinLocalDensity = rho
-MyClueGaudiAlgorithmWrapper.OutlierDeltaFactor = do
+MyClueGaudiAlgorithmWrapper.FollowerDistance = dm
 MyClueGaudiAlgorithmWrapper.OutputLevel = DEBUG
 
 MyCLUENtuplizer = CLUENtuplizer("CLUEAnalysis")
 MyCLUENtuplizer.ClusterCollection = "CLUEClusters"
 MyCLUENtuplizer.BarrelCaloHitsCollection = "ECALBarrel"
 MyCLUENtuplizer.EndcapCaloHitsCollection = "ECALEndcap"
-MyCLUENtuplizer.SingleMCParticle = True
 MyCLUENtuplizer.OutputLevel = WARNING
 
-str_params = str(rho).replace(".","p") + "_" + str(dc).replace(".","p") + "_" + str(do).replace(".","p")
+str_params = str(rho).replace(".","p") + "_" + str(dc).replace(".","p") + "_" + str(dm).replace(".","p")
 filename = "rec DATAFILE='k4clue_analysis_output_3D_"+str_params+".root' TYP='ROOT' OPT='RECREATE'"
 THistSvc().Output = [filename]
 THistSvc().OutputLevel = WARNING
@@ -80,20 +79,18 @@ THistSvc().AutoSave = True
 THistSvc().AutoFlush = True
 
 out = PodioOutput("out")
-MyClueGaudiAlgorithmWrapper.BarrelCaloHitsCollection = "ECALBarrel"
-MyClueGaudiAlgorithmWrapper.EndcapCaloHitsCollection = "ECALEndcap"
 out.filename = "my_output_clue_standalone.root"
 out.outputCommands = ["keep *"]
 
 algList.append(inp)
 algList.append(MyAIDAProcessor)
 algList.append(MyClueGaudiAlgorithmWrapper)
-algList.append(MyCLUENtuplizer)
+#algList.append(MyCLUENtuplizer)
 algList.append(out)
 
 ApplicationMgr( TopAlg = algList,
                 EvtSel = 'NONE',
-                EvtMax   = 3,
+                EvtMax   = 10,
                 ExtSvc = [evtsvc],
                 OutputLevel=WARNING
               )
