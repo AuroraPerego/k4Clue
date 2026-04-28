@@ -210,10 +210,10 @@ clue::AssociationMapHost ClueGaudiAlgorithmWrapper<nDim>::runAlgo(std::vector<cl
       m_clueAlgo->make_clusters(*m_queue, cluePoints);
     }
   } else if (m_coordinate==Coordinate::Polar) {
-      std::array<float, nDim> periods{}; // zero-initialize all to non-periodic
-      periods[1] = 2.0f * M_PI; // set phi coordinate as periodic
-      clue::PeriodicEuclideanMetric<nDim> metric(periods);
-      m_clueAlgo->make_clusters(*m_queue, cluePoints, metric);
+    std::array<float, nDim> periods{}; // zero-initialize all to non-periodic
+    periods[1] = 2.0f * M_PI; // set phi coordinate as periodic
+    clue::PeriodicEuclideanMetric<nDim> metric(periods);
+    m_clueAlgo->make_clusters(*m_queue, cluePoints, metric);
   } // if Cartesian or Polar (else should not happen due to checks in initialize())
 
   auto finish = std::chrono::high_resolution_clock::now();
