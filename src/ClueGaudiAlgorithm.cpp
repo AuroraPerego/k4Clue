@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "ClueGaudiAlgorithmWrapper.h"
+#include "ClueGaudiAlgorithm.h"
 
 #include "IO_helper.h"
 
@@ -28,13 +28,11 @@
 using namespace dd4hep;
 using namespace DDSegmentation;
 
-constexpr float C_MM_NS_SQUARED = 299.792458f * 299.792458f;
-
-#if defined(ALPAKA_ACC_GPU_CUDA_ENABLED)
+#if defined(K4CLUE_MODULE_CUDA)
 DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<4>, "ClueGaudiAlgorithmWrapperCUDA4D")
 DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<3>, "ClueGaudiAlgorithmWrapperCUDA3D")
 DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<2>, "ClueGaudiAlgorithmWrapperCUDA2D")
-#elif defined(ALPAKA_ACC_GPU_HIP_ENABLED)
+#elif defined(K4CLUE_MODULE_HIP)
 DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<4>, "ClueGaudiAlgorithmWrapperHIP4D")
 DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<3>, "ClueGaudiAlgorithmWrapperHIP3D")
 DECLARE_COMPONENT_WITH_ID(ClueGaudiAlgorithmWrapper<2>, "ClueGaudiAlgorithmWrapperHIP2D")
@@ -67,20 +65,15 @@ std::pair<size_t, size_t> resolveIndex(const std::vector<size_t>& offsets, size_
 } // anonymous namespace
 
 template <uint8_t nDim>
+ClueGaudiAlgorithmWrapper<nDim>::~ClueGaudiAlgorithmWrapper() {
+  if (m_backend != nullptr) {
+    destroyBackend<nDim>(m_backend);
+    m_backend = nullptr;
+  }
+}
+
+template <uint8_t nDim>
 StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
-  m_queue = clue::get_queue(0u);
-
-  const auto seeding_distance = (m_seed_dc < 0.f) ? m_dc : m_seed_dc;
-  const auto outlier_distance = (m_dm < 0.f) ? m_dc : m_dm;
-  auto start = std::chrono::high_resolution_clock::now();
-  m_clueAlgo = std::make_optional<clue::Clusterer<nDim>>(*m_queue, m_dc, m_rhoc, outlier_distance, seeding_distance,
-                                                         m_pointsPerBin);
-  auto finish = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = finish - start;
-  debug() << "ClueGaudiAlgorithmWrapper: Set up time: " << elapsed.count() * 1000 << " ms" << endmsg;
-  info() << "CLUEAlgo will run on device " << alpaka::getName(alpaka::getDev(*m_queue)) << " and params " << m_dc
-         << ", " << m_rhoc << ", " << outlier_distance << ", " << seeding_distance << endmsg;
-
   if (m_strategyName == "PerDetectorRegion") {
     m_strategy = Strategy::PerDetectorRegion;
   } else if (m_strategyName == "MergeCollections") {
@@ -92,26 +85,36 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
     return StatusCode::FAILURE;
   }
 
+  ClueCoordinate clueCoord;
   if (m_coordinateName == "Cartesian") {
     m_coordinate = Coordinate::Cartesian;
+    clueCoord = ClueCoordinate::Cartesian;
   } else if (m_coordinateName == "Polar") {
     m_coordinate = Coordinate::Polar;
-    // set periodic coordinates for CLUE algo
-    if (nDim == 4) {
-      // TODO: Implement custom metric weighted and periodic at the same time
+    clueCoord = ClueCoordinate::Polar;
+    if constexpr (nDim == 4) {
       error() << "Polar coordinates not yet supported for 4D clustering" << endmsg;
       return StatusCode::FAILURE;
     }
-    std::vector<uint8_t> coord(nDim, 0);
-    coord[1] = 1; // set phi coordinate as periodic
-    m_clueAlgo->setWrappedCoordinates(coord);
   } else {
     error() << "Unknown coordinate: " << m_coordinateName << endmsg;
     return StatusCode::FAILURE;
   }
 
-  // Add CellIDEncodingString to CLUE clusters and CLUE calo hits
-  // Get collection metadata cellID which is valid for both EB and EE
+  m_backend = createBackend<nDim>();
+  bool isOk = setupBackend<nDim>(m_backend, m_dc, m_rhoc, m_dm, m_seed_dc, m_pointsPerBin, clueCoord);
+  if (not isOk) {
+    error() << "No available device";
+    return StatusCode::FAILURE;
+  }
+
+  auto deviceName = alpaka::getName(alpaka::getDev(backendQueue<nDim>(m_backend)));
+  info() << "CLUEAlgo will run on device " << deviceName
+         << " and params " << m_dc << ", " << m_rhoc << ", "
+         << ((m_dm < 0.f) ? m_dc.value() : m_dm.value()) << ", "
+         << ((m_seed_dc < 0.f) ? m_dc.value() : m_seed_dc.value())
+         << endmsg;
+
   const std::string cellIDstr =
       k4FWCore::getCellIDEncoding(inputLocations("CaloHitsCollections")[0], this).value_or("");
   for (auto i = 0u; i < outputLocationsSize(); ++i)
@@ -196,7 +199,7 @@ ClueGaudiAlgorithmWrapper<nDim>::fillCLUEPoints(const std::vector<clue::CLUECalo
   } // if Cartesian or Polar (else should not happen due to checks in initialize())
 
   // Construct and return the PointsSoA object
-  return clue::PointsHost<nDim>(*m_queue, nPoints, floatBuffer, intBuffer);
+  return clue::PointsHost<nDim>(backendQueue<nDim>(m_backend), nPoints, floatBuffer, intBuffer);
 }
 
 template <uint8_t nDim>
@@ -209,30 +212,19 @@ clue::AssociationMapHost ClueGaudiAlgorithmWrapper<nDim>::runAlgo(std::vector<cl
   auto cluePoints = fillCLUEPoints(clue_hits, floatBuffer.data(), intBuffer.data());
 
   // Run CLUE
-  debug() << "Running CLUEAlgo on device " << alpaka::getName(alpaka::getDev(*m_queue)) << " in " << (uint16_t)nDim
-          << "D" << endmsg;
+  debug() << "Running CLUEAlgo on device "
+          << alpaka::getName(alpaka::getDev(backendQueue<nDim>(m_backend)))
+          << " in " << static_cast<uint16_t>(nDim) << "D" << endmsg;
 
-  // measure excution time of make_clusters
+  ClueCoordinate clueCoord = (m_coordinate == Coordinate::Cartesian) ? ClueCoordinate::Cartesian
+                                                                       : ClueCoordinate::Polar;
+
   auto start = std::chrono::high_resolution_clock::now();
-  if (m_coordinate == Coordinate::Cartesian) {
-    if constexpr (nDim == 4) {
-      auto metric = clue::metrics::WeightedEuclidean<nDim>(1.f, 1.f, 1.f, C_MM_NS_SQUARED);
-      m_clueAlgo->make_clusters(*m_queue, cluePoints, metric);
-    } else {
-      m_clueAlgo->make_clusters(*m_queue, cluePoints);
-    }
-  } else if (m_coordinate == Coordinate::Polar) {
-    std::array<float, nDim> periods{}; // zero-initialize all to non-periodic
-    periods[1] = 2.0f * M_PI;          // set phi coordinate as periodic
-    clue::PeriodicEuclideanMetric<nDim> metric(periods);
-    m_clueAlgo->make_clusters(*m_queue, cluePoints, metric);
-  } // if Cartesian or Polar (else should not happen due to checks in initialize())
-
+  auto clueClusters = launchClustering<nDim>(m_backend, cluePoints, clueCoord);
   auto finish = std::chrono::high_resolution_clock::now();
+
   std::chrono::duration<double> elapsed = finish - start;
   info() << "ClueGaudiAlgorithmWrapper: Elapsed time: " << elapsed.count() * 1000 << " ms" << endmsg;
-
-  auto clueClusters = m_clueAlgo->getClusters(cluePoints);
 
   debug() << "Finished running CLUE algorithm" << endmsg;
 

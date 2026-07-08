@@ -23,17 +23,18 @@
 #include "k4FWCore/MetadataUtils.h"
 #include "k4FWCore/Transformer.h"
 
+#include "ClueBackend.h"
+
 #include "CLUECalorimeterHit.h"
-#include "CLUEstering/CLUEstering.hpp"
 #include <edm4hep/CalorimeterHitCollection.h>
 #include <edm4hep/ClusterCollection.h>
 #include <edm4hep/Constants.h>
-
+#include <optional>
 #include <string>
+#include <vector>
 
 using CaloHitColl = edm4hep::CalorimeterHitCollection;
 using ClusterColl = edm4hep::ClusterCollection;
-
 using retType = std::tuple<ClusterColl, CaloHitColl>;
 
 template <uint8_t nDim>
@@ -55,6 +56,8 @@ struct ClueGaudiAlgorithmWrapper final
   StatusCode initialize() override;
   StatusCode finalize() override;
 
+  ~ClueGaudiAlgorithmWrapper();
+
   // Timing analysis
   void exclude_stats_outliers(std::vector<float>& v);
   std::pair<float, float> stats(const std::vector<float>& v);
@@ -62,7 +65,8 @@ struct ClueGaudiAlgorithmWrapper final
 
   clue::PointsHost<nDim> fillCLUEPoints(const std::vector<clue::CLUECalorimeterHit>& clue_hits, float* floatBuffer,
                                         int* intBuffer) const;
-  clue::AssociationMapHost runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits, const uint32_t offset = 0) const;
+  clue::AssociationMapHost runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
+                                         const uint32_t offset = 0) const;
 
   void fillFinalClusters(std::vector<clue::CLUECalorimeterHit> const& clue_hits,
                          clue::AssociationMapHost const& clusterMap, ClusterColl& clusters,
@@ -74,16 +78,14 @@ struct ClueGaudiAlgorithmWrapper final
   void transformClustersInCaloHits(ClusterColl& clusters, CaloHitColl& caloHits) const;
 
   enum class Coordinate { Cartesian, Polar };
-
   enum class Strategy { PerCollection, MergeCollections, PerDetectorRegion };
 
 private:
   // Total amount of EE+ and EE- layers (80)
   int m_maxLayerPerSide = 40;
 
-  // CLUE Algo
-  mutable std::optional<clue::Clusterer<nDim>> m_clueAlgo;
-  mutable std::optional<clue::Queue> m_queue;
+  // CLUE algo
+  mutable ClueBackend<nDim>* m_backend = nullptr;
 
   Gaudi::Property<float> m_dc{this, "CriticalDistance", 1.0f, "Distance used to compute the local density of a point"};
 

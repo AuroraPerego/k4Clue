@@ -24,11 +24,12 @@ set(ExternalData_URL_TEMPLATES
 )
 
 set(SOURCES_GPU
-  ${PROJECT_SOURCE_DIR}/src/ClueGaudiAlgorithmWrapper.cpp
+  ${PROJECT_SOURCE_DIR}/src/ClueBackend.cpp
 )
 
 set(SOURCES_CPU
   ${PROJECT_SOURCE_DIR}/src/CLUECalorimeterHit.cpp
+  ${PROJECT_SOURCE_DIR}/src/ClueGaudiAlgorithm.cpp
 )
 
 set(SOURCES ${SOURCES_CPU} ${SOURCES_GPU})
@@ -53,5 +54,12 @@ if(CMAKE_HIP_COMPILER)
   target_compile_options(ClueGaudiAlgorithmWrapperHIP PUBLIC
     $<$<COMPILE_LANGUAGE:HIP>:-DALPAKA_ACC_GPU_HIP_ENABLED>
     $<$<COMPILE_LANGUAGE:CXX>:-DALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED -DALPAKA_ACC_CPU_B_SEQ_T_SEQ_SYNC_BACKEND>
+  )
+  # Compile the Gaudi-side CPU file with Alpaka CPU backend enabled
+  set_source_files_properties(
+    ${PROJECT_SOURCE_DIR}/src/ClueGaudiAlgorithm.cpp
+    PROPERTIES
+    COMPILE_DEFINITIONS
+    "ALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED;ALPAKA_ACC_CPU_B_SEQ_T_SEQ_SYNC_BACKEND;K4CLUE_MODULE_HIP"
   )
 endif()
