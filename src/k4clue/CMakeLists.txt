@@ -28,6 +28,7 @@ set(SOURCES
   ${PROJECT_SOURCE_DIR}/src/ClueBackend.cpp
   ${PROJECT_SOURCE_DIR}/src/CLUECalorimeterHit.cpp
   ${PROJECT_SOURCE_DIR}/src/CLUENtuplizer.cpp
+  ${PROJECT_SOURCE_DIR}/src/ClueVertexing.cpp
 )
 
 gaudi_add_module(ClueGaudiAlgorithmWrapper

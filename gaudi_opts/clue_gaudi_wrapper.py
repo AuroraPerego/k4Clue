@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 from Gaudi.Configuration import WARNING, INFO
-from Configurables import ClueGaudiAlgorithmWrapper3D, CLUENtuplizer, THistSvc, EventDataSvc, MetadataSvc
+from Configurables import ClueGaudiAlgorithmWrapper3D, CLUENtuplizer, THistSvc, EventDataSvc, MetadataSvc, CLUEVertexing
 from k4FWCore import ApplicationMgr, IOSvc
 
 iosvc = IOSvc()
@@ -35,11 +35,15 @@ MyClueGaudiAlgorithmWrapper = ClueGaudiAlgorithmWrapper3D("ClueGaudiAlgorithmWra
     FollowerDistance = dm,
     OutputLevel = INFO,
     strategy = "MergeCollections", # "PerDetectorRegion", "PerCollection" , "MergeCollections"
-    coordinate = "Polar", # "Cartesian"
+    coordinate = "Cartesian",  #"Polar", # "Cartesian"
     SaveClustersAsHits = True,
 )
 
 MyCLUENtuplizer = CLUENtuplizer("CLUEAnalysis",
+    OutputLevel = WARNING
+)
+
+MyCLUEVertexing = CLUEVertexing("CLUEVertexing",
     OutputLevel = WARNING
 )
 
@@ -51,7 +55,7 @@ THistSvc().PrintAll = False
 THistSvc().AutoSave = True
 THistSvc().AutoFlush = True
 
-ApplicationMgr( TopAlg = [MyClueGaudiAlgorithmWrapper, MyCLUENtuplizer],
+ApplicationMgr( TopAlg = [MyClueGaudiAlgorithmWrapper, MyCLUENtuplizer, MyCLUEVertexing],
                 EvtSel = 'NONE',
                 EvtMax   = 3,
                 ExtSvc = [EventDataSvc("EventDataSvc"), MetadataSvc("MetadataSvc")],
