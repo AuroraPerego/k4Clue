@@ -89,27 +89,39 @@ clue::AssociationMapHost launchClustering(ClueBackend<nDim>* backend,
   return backend->clueAlgo->getClusters(cluePoints);
 }
 
+clue::AssociationMapHost launchVertexing(ClueBackend<1>* backend,
+                                          clue::PointsHost<1>& cluePoints) {
+  backend->clueAlgo->make_clusters(*backend->queue, cluePoints);
+  return backend->clueAlgo->getClusters(cluePoints);
+}
+
 // explicit instantiations
+template struct ClueBackend<1>;
 template struct ClueBackend<2>;
 template struct ClueBackend<3>;
 template struct ClueBackend<4>;
 
+template ClueBackend<1>* createBackend<1>();
 template ClueBackend<2>* createBackend<2>();
 template ClueBackend<3>* createBackend<3>();
 template ClueBackend<4>* createBackend<4>();
 
+template void destroyBackend<1>(ClueBackend<1>*);
 template void destroyBackend<2>(ClueBackend<2>*);
 template void destroyBackend<3>(ClueBackend<3>*);
 template void destroyBackend<4>(ClueBackend<4>*);
 
+template bool setupBackend<1>(ClueBackend<1>*, float, float, float, float, int, ClueCoordinate);
 template bool setupBackend<2>(ClueBackend<2>*, float, float, float, float, int, ClueCoordinate);
 template bool setupBackend<3>(ClueBackend<3>*, float, float, float, float, int, ClueCoordinate);
 template bool setupBackend<4>(ClueBackend<4>*, float, float, float, float, int, ClueCoordinate);
 
+template clue::Queue& backendQueue<1>(ClueBackend<1>*);
 template clue::Queue& backendQueue<2>(ClueBackend<2>*);
 template clue::Queue& backendQueue<3>(ClueBackend<3>*);
 template clue::Queue& backendQueue<4>(ClueBackend<4>*);
 
+template const clue::Queue& backendQueue<1>(const ClueBackend<1>*);
 template const clue::Queue& backendQueue<2>(const ClueBackend<2>*);
 template const clue::Queue& backendQueue<3>(const ClueBackend<3>*);
 template const clue::Queue& backendQueue<4>(const ClueBackend<4>*);

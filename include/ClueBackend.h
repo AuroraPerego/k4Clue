@@ -30,7 +30,7 @@ bool setupBackend(ClueBackend<nDim>* backend,
                   float dm,
                   float seed_dc,
                   int pointsPerBin,
-                  ClueCoordinate coordinate);
+                  ClueCoordinate coordinate = ClueCoordinate::Cartesian);
 
 // helpers
 template <uint8_t nDim>
@@ -45,4 +45,6 @@ clue::AssociationMapHost launchClustering(ClueBackend<nDim>* backend,
                                           clue::PointsHost<nDim>& cluePoints,
                                           ClueCoordinate coordinate);
 
+clue::AssociationMapHost launchVertexing(ClueBackend<1>* backend,
+                                         clue::PointsHost<1>& cluePoints);
 #endif
