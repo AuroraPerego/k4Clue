@@ -38,11 +38,15 @@ bool setupBackend(ClueBackend<nDim>* backend,
                   ClueCoordinate coordinate) {
 
   const std::vector<ALPAKA_BACKEND::Device> devices = alpaka::getDevs(clue::Platform{});
+  for (const auto& device : devices)
+    std::cout << " - " << alpaka::getName(device) << "\n";
   if (devices.empty()) {
     return false;
   }
 
   backend->queue = clue::get_queue(devices[0]);
+  auto deviceName = alpaka::getName(alpaka::getDev(*backend->queue));
+  std::cout << "CLUEAlgo will run on device " << deviceName << "\n";
 
   const auto seeding_distance = (seed_dc < 0.f) ? dc : seed_dc;
   const auto outlier_distance = (dm < 0.f) ? dc : dm;
@@ -73,17 +77,17 @@ clue::AssociationMapHost launchClustering(ClueBackend<nDim>* backend,
                                           clue::PointsHost<nDim>& cluePoints,
                                           ClueCoordinate coordinate) {
   if (coordinate == ClueCoordinate::Cartesian) {
-    std::array<float, nDim> periods{};
-    periods[1] = 2.0f * M_PI;
-    clue::PeriodicEuclideanMetric<nDim> metric(periods);
-    backend->clueAlgo->make_clusters(*backend->queue, cluePoints, metric);
-  } else if (coordinate == ClueCoordinate::Polar) {
     if constexpr (nDim == 4) {
       auto metric = clue::metrics::WeightedEuclidean<nDim>(1.f, 1.f, 1.f, C_MM_NS_SQUARED);
       backend->clueAlgo->make_clusters(*backend->queue, cluePoints, metric);
     } else {
       backend->clueAlgo->make_clusters(*backend->queue, cluePoints);
     }
+  } else if (coordinate == ClueCoordinate::Polar) {
+    std::array<float, nDim> periods{};
+    periods[1] = 2.0f * M_PI;
+    clue::PeriodicEuclideanMetric<nDim> metric(periods);
+    backend->clueAlgo->make_clusters(*backend->queue, cluePoints, metric);
   }
 
   return backend->clueAlgo->getClusters(cluePoints);
