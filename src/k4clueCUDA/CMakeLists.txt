@@ -65,12 +65,9 @@ if(CMAKE_CUDA_COMPILER)
     -L${CMAKE_CUDA_COMPILER}/../../lib64
   )
 
-
-  # Compile the Gaudi-side CPU file with Alpaka CPU backend enabled
   set_source_files_properties(
     ${PROJECT_SOURCE_DIR}/src/ClueGaudiAlgorithm.cpp
     PROPERTIES
-    COMPILE_DEFINITIONS
-    "ALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED;ALPAKA_ACC_CPU_B_SEQ_T_SEQ_SYNC_BACKEND;K4CLUE_MODULE_CUDA"
+    COMPILE_DEFINITIONS "K4CLUE_MODULE_CUDA"
   )
 endif()

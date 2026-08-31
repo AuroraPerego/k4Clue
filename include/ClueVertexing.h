@@ -42,10 +42,10 @@ using PartColl = edm4hep::ReconstructedParticleCollection;
 struct TrackInfo {
   float D0, phi, omega, Z0, tanLambda;
   float refX, refY, refZ;
-  float zip;      // Z0 at IP-like state, used as CLUE coordinate
+  float zip; // Z0 at IP-like state, used as CLUE coordinate
   float pt;
-  float time;     // raw hit time
-  float t0;       // propagated time at target (IP or vertex)
+  float time; // raw hit time
+  float t0;   // propagated time at target (IP or vertex)
   float path;
   float beta;
 };
@@ -61,16 +61,15 @@ struct ClusterInfo {
 struct ParticleInfo {
   bool hasTrack = false;
   bool usedInVertex = false;
-  TrackInfo track;                 // valid only if hasTrack
+  TrackInfo track; // valid only if hasTrack
   std::vector<ClusterInfo> clusters;
-  float particleTime = -99.f;      // averaged, propagated at vertex
+  float particleTime = -99.f; // averaged, propagated at vertex
 };
 
 struct CLUEVertexing final : k4FWCore::Consumer<void(const VertexColl&, const PartColl&)> {
   CLUEVertexing(const std::string& name, ISvcLocator* svcLoc)
       : Consumer(name, svcLoc,
-                 {KeyValues("VertexColl", {"PrimaryVertices"}),
-                  KeyValues("RecoParticles", {"PandoraPFOs"})}) {}
+                 {KeyValues("VertexColl", {"PrimaryVertices"}), KeyValues("RecoParticles", {"PandoraPFOs"})}) {}
 
   StatusCode initialize() override;
   StatusCode finalize() override;
@@ -85,32 +84,28 @@ struct CLUEVertexing final : k4FWCore::Consumer<void(const VertexColl&, const Pa
 
   // ---- CLUE vertexing ----
   /// Runs CLUE on (zip, pt) pairs to find candidate vertex clusters.
-  std::vector<int> runClueVertexing(const std::vector<float>& zip,
-                                     const std::vector<float>& pt) const;
+  ResultMap runClueVertexing(const std::vector<float>& zip, const std::vector<float>& pt) const;
 
   // ---- per-particle extraction ----
   /// Fills TrackInfo from the first available track, propagated to `target`.
   /// Returns false if the particle has no tracks (target propagation skipped).
-  bool fillTrackInfo(const edm4hep::ReconstructedParticle& part,
-                      const edm4hep::Vector3f& target, TrackInfo& out) const;
+  bool fillTrackInfo(const edm4hep::ReconstructedParticle& part, const edm4hep::Vector3f& target, TrackInfo& out) const;
 
   /// Fills ClusterInfo for all clusters of a particle.
   /// If hasTrack is true, propagates the track to each cluster position;
   /// otherwise infers a direction (PCA over cluster hits, or straight to origin)
   /// and propagates that pseudo-track instead.
-  std::vector<ClusterInfo> fillClusterInfo(const edm4hep::ReconstructedParticle& part,
-                                            bool hasTrack, const TrackInfo& trackAtLastHit) const;
+  std::vector<ClusterInfo> fillClusterInfo(const edm4hep::ReconstructedParticle& part, bool hasTrack,
+                                           const TrackInfo& trackAtLastHit) const;
 
   /// PCA-based direction estimate from a set of hit positions.
-  edm4hep::Vector3f estimateDirectionPCA(const std::vector<float>& x,
-                                          const std::vector<float>& y,
-                                          const std::vector<float>& z) const;
+  edm4hep::Vector3f estimateDirectionPCA(const std::vector<float>& x, const std::vector<float>& y,
+                                         const std::vector<float>& z) const;
 
   /// Builds a straight-line "virtual track" time propagation from a cluster
   /// back towards the origin (or along the PCA direction), given a beta.
-  std::pair<float, float> propagateClusterTime(const edm4hep::Vector3f& clusterPos,
-                                                const edm4hep::Vector3f& direction,
-                                                float beta = 1.0f) const;
+  std::pair<float, float> propagateClusterTime(const edm4hep::Vector3f& clusterPos, const edm4hep::Vector3f& direction,
+                                               float beta = 1.0f) const;
 
   /// Combines all timing info for a particle into a single propagated time.
   float computeParticleTime(const ParticleInfo& p) const;
@@ -150,7 +145,7 @@ private:
   Gaudi::Property<float> m_rhoc{this, "rhoc", 0.1f};
   Gaudi::Property<float> m_dm{this, "dm", 30.f};
   Gaudi::Property<float> m_seed_dc{this, "SeedCriticalDistance", 10};
-  Gaudi::Property<int>   m_pointsPerBin{this, "PointsPerBin", 10};
+  Gaudi::Property<int> m_pointsPerBin{this, "PointsPerBin", 10};
 };
 
 #endif // CLUE_VERTEXING_H

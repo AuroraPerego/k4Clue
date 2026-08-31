@@ -63,17 +63,14 @@ struct ClueGaudiAlgorithmWrapper final
   std::pair<float, float> stats(const std::vector<float>& v);
   void printTimingReport(std::vector<float>& vals, int repeats, const std::string label);
 
-  clue::PointsHost<nDim> fillCLUEPoints(const std::vector<clue::CLUECalorimeterHit>& clue_hits, float* floatBuffer,
-                                        int* intBuffer) const;
-  clue::AssociationMapHost runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                                         const uint32_t offset = 0) const;
+  // clue::PointsHost<nDim> fillCLUEPoints(const std::vector<clue::CLUECalorimeterHit>& clue_hits, float* floatBuffer,
+  //                                       int* intBuffer) const;
+  ResultMap runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits, const uint32_t offset = 0) const;
 
-  void fillFinalClusters(std::vector<clue::CLUECalorimeterHit> const& clue_hits,
-                         clue::AssociationMapHost const& clusterMap, ClusterColl& clusters,
-                         const std::vector<const CaloHitColl*>& calo_coll) const;
-  void fillFinalClustersPerLayer(std::vector<clue::CLUECalorimeterHit> const& clue_hits,
-                                 clue::AssociationMapHost const& clusterMap, ClusterColl& clusters,
-                                 const std::vector<const CaloHitColl*>& calo_coll) const;
+  void fillFinalClusters(std::vector<clue::CLUECalorimeterHit> const& clue_hits, ResultMap const& clusterMap,
+                         ClusterColl& clusters, const std::vector<const CaloHitColl*>& calo_coll) const;
+  void fillFinalClustersPerLayer(std::vector<clue::CLUECalorimeterHit> const& clue_hits, ResultMap const& clusterMap,
+                                 ClusterColl& clusters, const std::vector<const CaloHitColl*>& calo_coll) const;
   void calculatePosition(edm4hep::MutableCluster* cluster) const;
   void transformClustersInCaloHits(ClusterColl& clusters, CaloHitColl& caloHits) const;
 

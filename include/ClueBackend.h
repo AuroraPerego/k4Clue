@@ -6,14 +6,15 @@
 #ifndef CLUE_BACKEND_H
 #define CLUE_BACKEND_H
 
-#include "CLUEstering/CLUEstering.hpp"
-
 #include <cstdint>
+#include <vector>
 
 template <uint8_t nDim>
 struct ClueBackend;
 
 enum class ClueCoordinate { Cartesian, Polar };
+
+using ResultMap = std::vector<std::vector<uint32_t>>;
 
 // lifecycle
 template <uint8_t nDim>
@@ -24,27 +25,17 @@ void destroyBackend(ClueBackend<nDim>* backend);
 
 // setup
 template <uint8_t nDim>
-bool setupBackend(ClueBackend<nDim>* backend,
-                  float dc,
-                  float rhoc,
-                  float dm,
-                  float seed_dc,
-                  int pointsPerBin,
+bool setupBackend(ClueBackend<nDim>* backend, float dc, float rhoc, float dm, float seed_dc, int pointsPerBin,
                   ClueCoordinate coordinate = ClueCoordinate::Cartesian);
 
-// helpers
-template <uint8_t nDim>
-clue::Queue& backendQueue(ClueBackend<nDim>* backend);
+namespace clue {
+class CLUECalorimeterHit;
+}
 
 template <uint8_t nDim>
-const clue::Queue& backendQueue(const ClueBackend<nDim>* backend);
+ResultMap launchClustering(ClueBackend<nDim>* backend, const std::vector<clue::CLUECalorimeterHit>& hits,
+                           ClueCoordinate coordinate);
 
-// run clustering
-template <uint8_t nDim>
-clue::AssociationMapHost launchClustering(ClueBackend<nDim>* backend,
-                                          clue::PointsHost<nDim>& cluePoints,
-                                          ClueCoordinate coordinate);
+ResultMap launchVertexing(ClueBackend<1>* backend, const std::vector<float>& zip, const std::vector<float>& pt);
 
-clue::AssociationMapHost launchVertexing(ClueBackend<1>* backend,
-                                         clue::PointsHost<1>& cluePoints);
 #endif

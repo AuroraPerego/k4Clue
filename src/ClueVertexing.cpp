@@ -6,10 +6,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numeric>
 #include <iostream>
+#include <numeric>
 
-//#include "CLUEstering/CLUEstering.hpp"
+// #include "CLUEstering/CLUEstering.hpp"
 
 DECLARE_COMPONENT(CLUEVertexing)
 
@@ -27,10 +27,10 @@ enum class TrackStateLocation : int {
   AtVertex = 5,
 };
 
-std::pair<float, float> computeHelixPathAndTimeToPoint(const edm4hep::TrackState& ts,
-                                                         const edm4hep::Vector3f& target,
-                                                         float beta = 1.0f) {
-  if (beta <= 0) return {0.f, -99.f};
+std::pair<float, float> computeHelixPathAndTimeToPoint(const edm4hep::TrackState& ts, const edm4hep::Vector3f& target,
+                                                       float beta = 1.0f) {
+  if (beta <= 0)
+    return {0.f, -99.f};
 
   const float D0 = ts.D0, phi0 = ts.phi, omega = ts.omega, tanL = ts.tanLambda;
   const float x1 = ts.referencePoint.x, y1 = ts.referencePoint.y, z1 = ts.referencePoint.z;
@@ -50,8 +50,10 @@ std::pair<float, float> computeHelixPathAndTimeToPoint(const edm4hep::TrackState
   const float phi2 = std::atan2(y2 - yc, x2 - xc);
 
   float dphi = phi2 - phi1;
-  if (dphi > M_PI) dphi -= 2.0f * M_PI;
-  if (dphi < -M_PI) dphi += 2.0f * M_PI;
+  if (dphi > M_PI)
+    dphi -= 2.0f * M_PI;
+  if (dphi < -M_PI)
+    dphi += 2.0f * M_PI;
 
   const float pathLength = std::fabs(dphi / omega) * std::sqrt(1.f + tanL * tanL);
   return {pathLength, pathLength / (beta * C_MM_PER_NS)};
@@ -59,14 +61,14 @@ std::pair<float, float> computeHelixPathAndTimeToPoint(const edm4hep::TrackState
 
 std::pair<float, float> computeMomentum(const edm4hep::TrackState& ts, float Bz = 2.0f) {
   constexpr float a = 3e-4f;
-  if (std::fabs(ts.omega) < 1e-9f) return {0.f, 0.f};
+  if (std::fabs(ts.omega) < 1e-9f)
+    return {0.f, 0.f};
   const float pT = a * std::fabs(Bz / ts.omega);
   const float p = pT * std::sqrt(1.0f + ts.tanLambda * ts.tanLambda);
   return {pT, p};
 }
 
-std::pair<float, float> computeWeightedMeanAndStd(const std::vector<float>& v,
-                                                    const std::vector<float>& sigma) {
+std::pair<float, float> computeWeightedMeanAndStd(const std::vector<float>& v, const std::vector<float>& sigma) {
   std::vector<float> w(v.size());
   std::transform(sigma.begin(), sigma.end(), w.begin(), [](float s) { return 1.f / (s * s); });
   const float wsum = std::accumulate(w.begin(), w.end(), 0.f);
@@ -76,7 +78,6 @@ std::pair<float, float> computeWeightedMeanAndStd(const std::vector<float>& v,
 
 } // namespace
 
-
 CLUEVertexing::~CLUEVertexing() {
   if (m_backend != nullptr) {
     destroyBackend<1>(m_backend);
@@ -85,7 +86,8 @@ CLUEVertexing::~CLUEVertexing() {
 }
 
 StatusCode CLUEVertexing::initialize() {
-  if (Gaudi::Algorithm::initialize().isFailure()) return StatusCode::FAILURE;
+  if (Gaudi::Algorithm::initialize().isFailure())
+    return StatusCode::FAILURE;
 
   m_ths = service("THistSvc", true);
 
@@ -115,8 +117,6 @@ StatusCode CLUEVertexing::initialize() {
   bool isOk = setupBackend<1>(m_backend, m_dc, m_rhoc, m_dm, m_seed_dc, m_pointsPerBin);
   if (not isOk)
     error() << "No available device";
-  auto deviceName = alpaka::getName(alpaka::getDev(backendQueue<1>(m_backend)));
-  info() << "CLUEAlgo will run on device " << deviceName << endmsg;
 
   return StatusCode::SUCCESS;
 }
@@ -124,40 +124,40 @@ StatusCode CLUEVertexing::initialize() {
 // =====================================================================
 // 1) CLUE-based vertexing on (zip, pt)
 // =====================================================================
-std::vector<int> CLUEVertexing::runClueVertexing(const std::vector<float>& zip,
-                                                   const std::vector<float>& pt) const {
+ResultMap CLUEVertexing::runClueVertexing(const std::vector<float>& zip, const std::vector<float>& pt) const {
   const int n = static_cast<int>(zip.size());
-  std::vector<int> clusterIDs(n, -1);
-  if (n == 0) return clusterIDs;
+  if (n == 0)
+    return ResultMap{};
 
-  std::vector<float> floatBuffer(n * 2);
-  std::vector<int> intBuffer(n * 2);
-  std::copy(zip.begin(), zip.end(), floatBuffer.begin());
-  std::copy(pt.begin(), pt.end(), floatBuffer.begin() + n);
-  clue::PointsHost<1> points(backendQueue<1>(m_backend), n, floatBuffer.data(), intBuffer.data());
+  auto clusters = launchVertexing(m_backend, zip, pt);
 
-  auto clusters = launchVertexing(m_backend, points);
-
-  for (int i = 0; i < n; ++i) {
-    clusterIDs[i] = points.clusterIndexes()[i];
-    verbose() << "Point #" << i << " : (zip, pt) = (" <<  zip[i] << ","<< pt[i] << ")"
-              << " is in cluster " << clusterIDs[i] << endmsg;
+  for (std::size_t vertexIndex = 0; vertexIndex < clusters.size(); ++vertexIndex) {
+    const auto& vertex = clusters[vertexIndex];
+    verbose() << "Vertex " << vertexIndex << " contains:" << endmsg;
+    for (const uint32_t pointIndex : vertex) {
+      if (pointIndex >= static_cast<uint32_t>(n)) {
+        error() << "Invalid point index " << pointIndex << " in vertex " << vertexIndex << endmsg;
+        continue;
+      }
+      verbose() << "  particle " << pointIndex << " : (zip, pt) = (" << zip[pointIndex] << ", " << pt[pointIndex] << ")"
+                << " is in vertex " << vertexIndex << endmsg;
+    }
   }
-  return clusterIDs;
+  return clusters;
 }
 
 // =====================================================================
 // PCA direction estimate from cluster hit positions
 // =====================================================================
-edm4hep::Vector3f CLUEVertexing::estimateDirectionPCA(const std::vector<float>& x,
-                                                        const std::vector<float>& y,
-                                                        const std::vector<float>& z) const {
+edm4hep::Vector3f CLUEVertexing::estimateDirectionPCA(const std::vector<float>& x, const std::vector<float>& y,
+                                                      const std::vector<float>& z) const {
   const int n = static_cast<int>(x.size());
   if (n < 2) {
     // Not enough points for PCA — fall back to straight-to-origin direction
     if (n == 1) {
       const float norm = std::sqrt(x[0] * x[0] + y[0] * y[0] + z[0] * z[0]);
-      if (norm > 1e-6f) return {x[0] / norm, y[0] / norm, z[0] / norm};
+      if (norm > 1e-6f)
+        return {x[0] / norm, y[0] / norm, z[0] / norm};
     }
     return {0.f, 0.f, 1.f};
   }
@@ -170,8 +170,12 @@ edm4hep::Vector3f CLUEVertexing::estimateDirectionPCA(const std::vector<float>& 
   float cxx = 0, cxy = 0, cxz = 0, cyy = 0, cyz = 0, czz = 0;
   for (int i = 0; i < n; ++i) {
     const float dx = x[i] - mx, dy = y[i] - my, dz = z[i] - mz;
-    cxx += dx * dx; cxy += dx * dy; cxz += dx * dz;
-    cyy += dy * dy; cyz += dy * dz; czz += dz * dz;
+    cxx += dx * dx;
+    cxy += dx * dy;
+    cxz += dx * dz;
+    cyy += dy * dy;
+    cyz += dy * dz;
+    czz += dz * dz;
   }
 
   // Power iteration for dominant eigenvector (avoids external linalg dependency)
@@ -181,25 +185,30 @@ edm4hep::Vector3f CLUEVertexing::estimateDirectionPCA(const std::vector<float>& 
     const float ny = cxy * vx + cyy * vy + cyz * vz;
     const float nz = cxz * vx + cyz * vy + czz * vz;
     const float norm = std::sqrt(nx * nx + ny * ny + nz * nz);
-    if (norm < 1e-9f) break;
-    vx = nx / norm; vy = ny / norm; vz = nz / norm;
+    if (norm < 1e-9f)
+      break;
+    vx = nx / norm;
+    vy = ny / norm;
+    vz = nz / norm;
   }
 
   // Orient outward from the origin, consistent with "away from IP" hypothesis
   const float dot = vx * mx + vy * my + vz * mz;
-  if (dot < 0) { vx = -vx; vy = -vy; vz = -vz; }
+  if (dot < 0) {
+    vx = -vx;
+    vy = -vy;
+    vz = -vz;
+  }
 
   return {vx, vy, vz};
 }
 
 std::pair<float, float> CLUEVertexing::propagateClusterTime(const edm4hep::Vector3f& clusterPos,
-                                                               const edm4hep::Vector3f& direction,
-                                                               float beta) const {
+                                                            const edm4hep::Vector3f& direction, float beta) const {
   // Straight-line path length from origin along `direction` to the cluster,
   // projected onto that direction (used when no track is available).
-  const float pathLength = std::sqrt(clusterPos.x * clusterPos.x +
-                                      clusterPos.y * clusterPos.y +
-                                      clusterPos.z * clusterPos.z);
+  const float pathLength =
+      std::sqrt(clusterPos.x * clusterPos.x + clusterPos.y * clusterPos.y + clusterPos.z * clusterPos.z);
   const float dt = pathLength / (beta * C_MM_PER_NS);
   return {pathLength, dt};
 }
@@ -207,22 +216,28 @@ std::pair<float, float> CLUEVertexing::propagateClusterTime(const edm4hep::Vecto
 // =====================================================================
 // 2) Fill track / cluster info per particle
 // =====================================================================
-bool CLUEVertexing::fillTrackInfo(const edm4hep::ReconstructedParticle& part,
-                                   const edm4hep::Vector3f& target, TrackInfo& out) const {
-  if (part.getTracks().empty()) return false;
+bool CLUEVertexing::fillTrackInfo(const edm4hep::ReconstructedParticle& part, const edm4hep::Vector3f& target,
+                                  TrackInfo& out) const {
+  if (part.getTracks().empty())
+    return false;
 
   const auto& track = part.getTracks()[0]; // use the first track
 
-  auto ts1 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(),
-                            [](auto ts) { return static_cast<int>(ts.location) ==
-                                                 static_cast<int>(TrackStateLocation::AtIP); });
-  auto ts2 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(),
-                            [](auto ts) { return static_cast<int>(ts.location) ==
-                                                 static_cast<int>(TrackStateLocation::AtLastHit); });
+  auto ts1 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(), [](auto ts) {
+    return static_cast<int>(ts.location) == static_cast<int>(TrackStateLocation::AtIP);
+  });
+  auto ts2 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(), [](auto ts) {
+    return static_cast<int>(ts.location) == static_cast<int>(TrackStateLocation::AtLastHit);
+  });
 
-  out.D0 = ts2.D0; out.phi = ts2.phi; out.omega = ts2.omega;
-  out.Z0 = ts2.Z0; out.tanLambda = ts2.tanLambda;
-  out.refX = ts2.referencePoint.x; out.refY = ts2.referencePoint.y; out.refZ = ts2.referencePoint.z;
+  out.D0 = ts2.D0;
+  out.phi = ts2.phi;
+  out.omega = ts2.omega;
+  out.Z0 = ts2.Z0;
+  out.tanLambda = ts2.tanLambda;
+  out.refX = ts2.referencePoint.x;
+  out.refY = ts2.referencePoint.y;
+  out.refZ = ts2.referencePoint.z;
   out.zip = ts1.Z0;
 
   const auto [pT1, p1] = computeMomentum(ts1);
@@ -240,16 +255,17 @@ bool CLUEVertexing::fillTrackInfo(const edm4hep::ReconstructedParticle& part,
   return true;
 }
 
-std::vector<ClusterInfo> CLUEVertexing::fillClusterInfo(const edm4hep::ReconstructedParticle& part,
-                                                          bool hasTrack,
-                                                          const TrackInfo& trackAtLastHit) const {
+std::vector<ClusterInfo> CLUEVertexing::fillClusterInfo(const edm4hep::ReconstructedParticle& part, bool hasTrack,
+                                                        const TrackInfo& trackAtLastHit) const {
   std::vector<ClusterInfo> result;
   result.reserve(part.getClusters().size());
 
   for (const auto& cl : part.getClusters()) {
     ClusterInfo ci;
     ci.energy = cl.getEnergy();
-    ci.x = cl.getPosition().x; ci.y = cl.getPosition().y; ci.z = cl.getPosition().z;
+    ci.x = cl.getPosition().x;
+    ci.y = cl.getPosition().y;
+    ci.z = cl.getPosition().z;
 
     float sumT = 0.f;
     for (const auto& hit : cl.getHits()) {
@@ -264,9 +280,9 @@ std::vector<ClusterInfo> CLUEVertexing::fillClusterInfo(const edm4hep::Reconstru
     if (hasTrack) {
       // Reconstruct the AtLastHit TrackState to propagate to this cluster
       const auto& track = part.getTracks()[0];
-      auto ts2 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(),
-                                [](auto ts) { return static_cast<int>(ts.location) ==
-                                                     static_cast<int>(TrackStateLocation::AtLastHit); });
+      auto ts2 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(), [](auto ts) {
+        return static_cast<int>(ts.location) == static_cast<int>(TrackStateLocation::AtLastHit);
+      });
       const auto [path, deltaT] = computeHelixPathAndTimeToPoint(ts2, cl.getPosition(), trackAtLastHit.beta);
       ci.propTime = deltaT;
       ci.propPath = path;
@@ -306,7 +322,8 @@ float CLUEVertexing::computeParticleTime(const ParticleInfo& p) const {
     errors.push_back(0.1f); // cluster timing resolution, tune as needed
   }
 
-  if (times.empty()) return -99.f;
+  if (times.empty())
+    return -99.f;
   const auto [mean, err] = computeWeightedMeanAndStd(times, errors);
   return mean;
 }
@@ -322,34 +339,28 @@ void CLUEVertexing::operator()(const VertexColl& /*vtx_coll*/, const PartColl& p
   std::vector<int> partIndexForClue;
 
   for (const auto& part : part_coll) {
-    if (part.getTracks().empty()) continue; // CLUE input requires a track-based zip/pt for now
+    if (part.getTracks().empty())
+      continue; // CLUE input requires a track-based zip/pt for now
     const auto& track = part.getTracks()[0];
-    auto ts1 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(),
-                              [](auto ts) { return static_cast<int>(ts.location) ==
-                                                   static_cast<int>(TrackStateLocation::AtIP); });
+    auto ts1 = *std::find_if(track.getTrackStates().begin(), track.getTrackStates().end(), [](auto ts) {
+      return static_cast<int>(ts.location) == static_cast<int>(TrackStateLocation::AtIP);
+    });
     const auto [pT1, p1] = computeMomentum(ts1);
     zip_all.push_back(ts1.Z0);
     pt_all.push_back(pT1);
     partIndexForClue.push_back(part.id().index);
   }
 
-  const std::vector<int> clusterIDs = runClueVertexing(zip_all, pt_all);
-
-  // Group particle indices by CLUE vertex id
-  std::unordered_map<int, std::vector<int>> vertexToParticles;
-  for (size_t i = 0; i < clusterIDs.size(); ++i) {
-    if (clusterIDs[i] < 0) continue; // outlier / noise, not associated to a vertex
-    vertexToParticles[clusterIDs[i]].push_back(partIndexForClue[i]);
-  }
+  const ResultMap vertexToParticles = runClueVertexing(zip_all, pt_all);
 
   // ---- Step 2 & 3: loop over particles, fill track/cluster info, average vertex time ----
   int globalTrackIndex = 0, globalClusterIndex = 0, globalParticleIndex = 0;
 
-  for (const auto& [vtxID, partIndices] : vertexToParticles) {
+  for (const auto& particlesInVtx : vertexToParticles) {
     std::vector<float> vertexTimes;
 
     for (const auto& part : part_coll) {
-      if (std::find(partIndices.begin(), partIndices.end(), part.id().index) == partIndices.end())
+      if (std::find(particlesInVtx.begin(), particlesInVtx.end(), part.id().index) == particlesInVtx.end())
         continue;
 
       ParticleInfo pinfo;
@@ -385,7 +396,9 @@ void CLUEVertexing::operator()(const VertexColl& /*vtx_coll*/, const PartColl& p
       pinfo.clusters = fillClusterInfo(part, pinfo.hasTrack, pinfo.track);
       for (const auto& ci : pinfo.clusters) {
         clus_energy.push_back(ci.energy);
-        clus_x.push_back(ci.x); clus_y.push_back(ci.y); clus_z.push_back(ci.z);
+        clus_x.push_back(ci.x);
+        clus_y.push_back(ci.y);
+        clus_z.push_back(ci.z);
         clus_time.push_back(ci.time);
         clus_propTime.push_back(ci.propTime);
         clus_propPath.push_back(ci.propPath);
@@ -408,7 +421,9 @@ void CLUEVertexing::operator()(const VertexColl& /*vtx_coll*/, const PartColl& p
 
     // ---- vertex time = average over particle times ----
     std::vector<float> validTimes;
-    for (float t : vertexTimes) if (t > -90.f) validTimes.push_back(t);
+    for (float t : vertexTimes)
+      if (t > -90.f)
+        validTimes.push_back(t);
 
     float vtxTime = -99.f, vtxTimeErr = -1.f;
     if (!validTimes.empty()) {
@@ -509,6 +524,7 @@ void CLUEVertexing::cleanTrees() const {
 }
 
 StatusCode CLUEVertexing::finalize() {
-  if (Gaudi::Algorithm::finalize().isFailure()) return StatusCode::FAILURE;
+  if (Gaudi::Algorithm::finalize().isFailure())
+    return StatusCode::FAILURE;
   return StatusCode::SUCCESS;
 }

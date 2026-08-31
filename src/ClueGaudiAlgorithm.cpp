@@ -108,12 +108,9 @@ StatusCode ClueGaudiAlgorithmWrapper<nDim>::initialize() {
     return StatusCode::FAILURE;
   }
 
-  auto deviceName = alpaka::getName(alpaka::getDev(backendQueue<nDim>(m_backend)));
-  info() << "CLUEAlgo will run on device " << deviceName
-         << " and params " << m_dc << ", " << m_rhoc << ", "
+  info() << "CLUEAlgo will run with params " << m_dc << ", " << m_rhoc << ", "
          << ((m_dm < 0.f) ? m_dc.value() : m_dm.value()) << ", "
-         << ((m_seed_dc < 0.f) ? m_dc.value() : m_seed_dc.value())
-         << endmsg;
+         << ((m_seed_dc < 0.f) ? m_dc.value() : m_seed_dc.value()) << endmsg;
 
   const std::string cellIDstr =
       k4FWCore::getCellIDEncoding(inputLocations("CaloHitsCollections")[0], this).value_or("");
@@ -165,62 +162,13 @@ void ClueGaudiAlgorithmWrapper<nDim>::printTimingReport(std::vector<float>& vals
 }
 
 template <uint8_t nDim>
-clue::PointsHost<nDim>
-ClueGaudiAlgorithmWrapper<nDim>::fillCLUEPoints(const std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                                                float* floatBuffer, int* intBuffer) const {
-  size_t nPoints = clue_hits.size();
-
-  if (m_coordinate == Coordinate::Cartesian) {
-    for (size_t i = 0; i < nPoints; ++i) {
-      const auto& position = clue_hits[i].getPosition();
-      floatBuffer[i] = position.x;           // Fill x coordinates
-      floatBuffer[nPoints + i] = position.y; // Fill y coordinates
-      if constexpr (nDim >= 3)
-        floatBuffer[nPoints * 2 + i] = position.z; // Fill z coordinates
-      if constexpr (nDim >= 4)
-        floatBuffer[nPoints * 3 + i] = clue_hits[i].getTime();    // Fill time coordinates
-      floatBuffer[nPoints * nDim + i] = clue_hits[i].getEnergy(); // Fill weights
-    }
-  } else if (m_coordinate == Coordinate::Polar) {
-    for (size_t i = 0; i < nPoints; ++i) {
-      float phi = clue_hits[i].getPhi();
-      // Normalize phi to [0, 2*pi] for periodic distance calculation
-      // (clue::PeriodicEuclideanMetric only works with positive periods)
-      if (phi < 0) {
-        phi += 2.0f * M_PI;
-      }
-
-      floatBuffer[i] = clue_hits[i].getTheta(); // Fill theta coordinates
-      floatBuffer[nPoints + i] = phi;           // Fill phi coordinates
-      if constexpr (nDim >= 3)
-        floatBuffer[nPoints * 2 + i] = clue_hits[i].getPosition().z; // Fill z coordinates
-      floatBuffer[nPoints * nDim + i] = clue_hits[i].getEnergy();    // Fill weights
-    }
-  } // if Cartesian or Polar (else should not happen due to checks in initialize())
-
-  // Construct and return the PointsSoA object
-  return clue::PointsHost<nDim>(backendQueue<nDim>(m_backend), nPoints, floatBuffer, intBuffer);
-}
-
-template <uint8_t nDim>
-clue::AssociationMapHost ClueGaudiAlgorithmWrapper<nDim>::runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
-                                                                  const uint32_t offset) const {
-  // Fill CLUE inputs
-  size_t nPoints = clue_hits.size();
-  std::vector<float> floatBuffer(nPoints * (nDim + 1));
-  std::vector<int> intBuffer(nPoints * 2);
-  auto cluePoints = fillCLUEPoints(clue_hits, floatBuffer.data(), intBuffer.data());
-
-  // Run CLUE
-  debug() << "Running CLUEAlgo on device "
-          << alpaka::getName(alpaka::getDev(backendQueue<nDim>(m_backend)))
-          << " in " << static_cast<uint16_t>(nDim) << "D" << endmsg;
-
-  ClueCoordinate clueCoord = (m_coordinate == Coordinate::Cartesian) ? ClueCoordinate::Cartesian
-                                                                       : ClueCoordinate::Polar;
+ResultMap ClueGaudiAlgorithmWrapper<nDim>::runAlgo(std::vector<clue::CLUECalorimeterHit>& clue_hits,
+                                                   const uint32_t offset) const {
+  ClueCoordinate clueCoord =
+      (m_coordinate == Coordinate::Cartesian) ? ClueCoordinate::Cartesian : ClueCoordinate::Polar;
 
   auto start = std::chrono::high_resolution_clock::now();
-  auto clueClusters = launchClustering<nDim>(m_backend, cluePoints, clueCoord);
+  auto clueClusters = launchClustering<nDim>(m_backend, clue_hits, clueCoord);
   auto finish = std::chrono::high_resolution_clock::now();
 
   std::chrono::duration<double> elapsed = finish - start;
@@ -228,34 +176,37 @@ clue::AssociationMapHost ClueGaudiAlgorithmWrapper<nDim>::runAlgo(std::vector<cl
 
   debug() << "Finished running CLUE algorithm" << endmsg;
 
-  // Including CLUE info in cluePoints
-  for (int32_t i = 0; i < cluePoints.size(); i++) {
-    // offset is 0 for the barrel and is the number of clusters in the barrel for the endcap
-    clue_hits[i].setClusterIndex(cluePoints.clusterIndexes()[i] + offset);
-    verbose() << "CLUE Point #" << i << " : (x,y,z) = (" << clue_hits[i].getPosition().x << ","
-              << clue_hits[i].getPosition().y << "," << clue_hits[i].getPosition().z << ")";
-    if (cluePoints.clusterIndexes()[i] == -1) {
-      verbose() << " is outlier" << endmsg;
-      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::outlier);
-    } else {
-      verbose() << " is follower of cluster #" << cluePoints.clusterIndexes()[i] << endmsg;
-      clue_hits[i].setStatus(clue::CLUECalorimeterHit::Status::follower);
+  // Initialise all hits as outliers and then fill followers
+  for (auto& clueHit : clue_hits) {
+    clueHit.setClusterIndex(-1);
+    clueHit.setStatus(clue::CLUECalorimeterHit::Status::outlier);
+  }
+  for (uint32_t clusterIndex = 0; clusterIndex < clueClusters.size(); ++clusterIndex) {
+    for (const uint32_t pointIndex : clueClusters[clusterIndex]) {
+      if (pointIndex >= clue_hits.size()) {
+        error() << "Invalid point index " << pointIndex << " in cluster " << clusterIndex << endmsg;
+        continue;
+      }
+      clue_hits[pointIndex].setClusterIndex(clusterIndex + offset);
+      clue_hits[pointIndex].setStatus(clue::CLUECalorimeterHit::Status::follower);
+      verbose() << "CLUE Point #" << pointIndex << " : (x,y,z) = (" << clue_hits[pointIndex].getPosition().x << ","
+                << clue_hits[pointIndex].getPosition().y << "," << clue_hits[pointIndex].getPosition().z << ")"
+                << " is follower of cluster #" << clusterIndex << endmsg;
     }
-  } // for cluePoints
+  }
 
   return clueClusters;
 }
 
 template <uint8_t nDim>
 void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClusters(std::vector<clue::CLUECalorimeterHit> const& clue_hits,
-                                                        clue::AssociationMapHost const& clusterMap,
-                                                        ClusterColl& clusters,
+                                                        ResultMap const& clusterMap, ClusterColl& clusters,
                                                         const std::vector<const CaloHitColl*>& calo_coll) const {
   // Precompute cumulative offsets once
   const auto collOffsets = makeOffsets(calo_coll);
 
   for (auto cl = 0u; cl < clusterMap.size(); ++cl) {
-    if (clusterMap.empty(cl)) // check if there are elements associated with index cl
+    if (clusterMap[cl].empty()) // check if there are elements associated with index cl
       continue;
 
     auto cluster = clusters.create();
@@ -288,8 +239,8 @@ void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClusters(std::vector<clue::CLUECa
 
 template <uint8_t nDim>
 void ClueGaudiAlgorithmWrapper<nDim>::fillFinalClustersPerLayer(
-    std::vector<clue::CLUECalorimeterHit> const& clue_hits, clue::AssociationMapHost const& clusterMap,
-    ClusterColl& clusters, const std::vector<const CaloHitColl*>& calo_coll) const {
+    std::vector<clue::CLUECalorimeterHit> const& clue_hits, ResultMap const& clusterMap, ClusterColl& clusters,
+    const std::vector<const CaloHitColl*>& calo_coll) const {
   if constexpr (nDim == 2) {
     // Precompute cumulative offsets once
     const auto collOffsets = makeOffsets(calo_coll);
